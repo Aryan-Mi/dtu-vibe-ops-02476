@@ -51,7 +51,72 @@ url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
 [tool.ruff]
+target-version = "py313"
 line-length = 120
+lint.select = [
+  "A",
+  "ASYNC",
+  "B",
+  "BLE",
+  "C4",
+  "C90",
+  "COM",
+  "D",
+  "DJ",
+  "DTZ",
+  "E",
+  "EM",
+  "ERA",
+  "EXE",
+  "F",
+  "FA",
+  "I",
+  "ICN",
+  "INT",
+  "ISC",
+  "LOG",
+  "N",
+  "PGH",
+  "PIE",
+  "PT",
+  "PYI",
+  "Q",
+  "RET",
+  "RSE",
+  "S",
+  "SIM",
+  "SLF",
+  "SLOT",
+  "T10",
+  "TCH",
+  "TID",
+  "UP",
+  "W",
+  "YTT",
+]
+lint.ignore = [
+  "B008",
+  "B028",
+  "B905",
+  "COM812",
+  "D100",
+  "D107",
+  "D211",
+  "D212",
+  "ERA001",
+  "F821",
+  "F841",
+  "ISC001",
+  "S101",
+  "S301",
+  "S311",
+  "S603",
+  "S605",
+  "S607",
+  "TC003",
+  "W293",
+]
+lint.pydocstyle.convention = "google"
 
 [tool.coverage.run]
 omit = ["tests/*"]
