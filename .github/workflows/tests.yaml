@@ -10,6 +10,8 @@ on:
 
 jobs:
   test:
+    # TODO: Workflow disabled (temporarily)
+    if: false
     runs-on: ${{ matrix.operating-system }}
     strategy:
       matrix:

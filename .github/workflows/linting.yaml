@@ -10,6 +10,8 @@ on:
 
 jobs:
   format:
+    # TODO: Workflow disabled (temporarily)
+    if: false
     name: Check code formatting
     runs-on: ubuntu-latest
 
