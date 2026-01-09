@@ -1,0 +1,6 @@
+[core]
+    remote = myremote
+['remote "storage"']
+    url = gdrive://17LdbtfvO5wAjnp58Ro132iD6NHHY97wY
+['remote "myremote"']
+    url = gs://skin_cancer_data_set
