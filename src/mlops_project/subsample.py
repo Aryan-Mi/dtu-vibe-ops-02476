@@ -60,6 +60,7 @@ def subsample_dataset(
     # Subsample each category maintaining relative distribution
     for dx_category, category_count in category_counts.items():
         # Calculate target count for this category
+        dx_category = str(dx_category)  # Cast to str for type safety
         target_count = int(total_samples * percentage * category_percentages[dx_category])
 
         # Ensure we don't sample more than available
@@ -73,9 +74,10 @@ def subsample_dataset(
             sampled_df = category_df.sample(n=target_count, random_state=random_seed)
 
             # Convert to list of dictionaries with all features
-            result[dx_category] = sampled_df[
+            records: list[dict[str, Any]] = sampled_df[
                 ["image_id", "lesion_id", "dx", "dx_type", "age", "sex", "localization", "dataset"]
-            ].to_dict("records")
+            ].to_dict("records")  # type: ignore[assignment]
+            result[dx_category] = records
         else:
             result[dx_category] = []
 
@@ -95,7 +97,7 @@ def subsample_cli(
 
         # Print summary
         total_sampled = sum(len(images) for images in result.values())
-        typer.echo(f"Subsampled {total_sampled} images ({percentage*100:.1f}% of dataset)")
+        typer.echo(f"Subsampled {total_sampled} images ({percentage * 100:.1f}% of dataset)")
         typer.echo("\nCategory distribution:")
         for dx_category, images in result.items():
             typer.echo(f"  {dx_category}: {len(images)} images")
