@@ -135,12 +135,12 @@ class ResNet(pl.LightningModule):
         ]
         
         # 2. Stack Residual Blocks
-        stride = 1
-        for cout in output_channels:
-            Layers.append(ResidualBlock(base_channel, cout, stride=stride, use_bn=use_bn))
-
-            base_channel = cout
-            stride = 2
+        in_ch = base_channel
+        for cout, stride in zip(output_channels, strides):
+            Layers.append(
+                ResidualBlock(in_ch, cout, stride=stride, use_bn=use_bn)
+            )
+            in_ch = cout  
 
         # 3. Final Classifier
         Layers.append(nn.AdaptiveAvgPool2d(1))  # Global average pooling. Will output (batch_size, channels, 1, 1)
