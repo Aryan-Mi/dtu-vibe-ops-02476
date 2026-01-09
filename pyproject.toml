@@ -21,7 +21,8 @@ dependencies = [
     "dvc>=3.66.1",
     "dvc-gdrive>=3.0.1",
     "fastapi==0.115.6",
-    "torch==2.6.0",
+    "pandas>=2.0.0",
+    "torch==2.2.2",
     "typer==0.15.1",
     "uvicorn==0.34.0",
 ]
@@ -40,9 +41,9 @@ dev = [
 
 
 [tool.uv.sources]
-torch = [
-    { index = "pytorch-cpu" },
-]
+# torch = [
+#     { index = "pytorch-cpu" },
+# ]
 torchvision = [
     { index = "pytorch-cpu" },
 ]
