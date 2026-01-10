@@ -34,11 +34,13 @@ class CancerDataset(Dataset):
         split_indices: list[int] | None = None,
     ) -> None:
         """
+        Initialize the ham10000 dataset.
+
         Args:
             data_path: Path to the data folder containing images/ and metadata/
             metadata_file: Name of the metadata CSV file
             transform: Optional transform to apply to images
-            split_indices: Optional list of indices for train/val/test split
+            split_indices: Optional list of indices for train/val/test split.
         """
         self.data_path = Path(data_path)
         self.images_path = self.data_path / "images"
@@ -72,10 +74,7 @@ class CancerDataset(Dataset):
         label = int(row["label"])
 
         # Apply transforms
-        if self.transform:
-            image = self.transform(image)
-        else:
-            image = transforms.ToTensor()(image)
+        image = self.transform(image) if self.transform else transforms.ToTensor()(image)
 
         return image, label
 
