@@ -1643,7 +1643,6 @@ dependencies = [
     { name = "torch", version = "2.6.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "python_full_version >= '3.14' or sys_platform != 'darwin'" },
     { name = "torchvision", version = "0.21.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'aarch64' and platform_python_implementation == 'CPython' and sys_platform == 'linux') or (python_full_version < '3.14' and sys_platform == 'darwin')" },
     { name = "torchvision", version = "0.21.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.14' and sys_platform == 'darwin') or (python_full_version >= '3.14' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (platform_python_implementation != 'CPython' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
-    { name = "transforms" },
     { name = "typer" },
     { name = "uvicorn" },
 ]
@@ -1671,7 +1670,6 @@ requires-dist = [
     { name = "scikit-learn", specifier = ">=1.8.0" },
     { name = "torch", specifier = "==2.6.0", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torchvision", specifier = ">=0.21.0", index = "https://download.pytorch.org/whl/cpu" },
-    { name = "transforms", specifier = ">=0.2.1" },
     { name = "typer", specifier = "==0.15.1" },
     { name = "uvicorn", specifier = "==0.34.0" },
 ]
@@ -3246,15 +3244,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737, upload-time = "2024-11-24T20:12:22.481Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl", hash = "sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2", size = 78540, upload-time = "2024-11-24T20:12:19.698Z" },
-]
-
-[[package]]
-name = "transforms"
-version = "0.2.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/dc/a4/dcc6a3c5292fae5d8a0aadaaa73b3d9eb0cef141ef8426da10a0f57f0c2f/transforms-0.2.1.tar.gz", hash = "sha256:da1076d7762337b2c654db3e45dd1a7fb53794df7610a8b19a63e994cec43964", size = 19107, upload-time = "2023-11-08T14:38:43.577Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/15/9b1a41ba648851defa77180fbe6c1278bae7a164a90df81ccdfa7103a4e7/transforms-0.2.1-py3-none-any.whl", hash = "sha256:2159892daec3d62d894bc575a64612509b7d1733418eb04bc58812257dcd3b2e", size = 18927, upload-time = "2023-11-08T14:38:42.331Z" },
 ]
 
 [[package]]
