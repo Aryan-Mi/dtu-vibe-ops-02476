@@ -1,4 +1,4 @@
-from torch import nn
+from torch import Tensor, nn
 import torch
 import pytorch_lightning as pl
 from torchvision import models
@@ -91,6 +91,20 @@ class BaselineCNN(pl.LightningModule):
         # on_epoch=True to log epoch-level metrics
         self.log('val_loss', loss, on_epoch=True)
         self.log('val_acc', acc, on_epoch=True)
+    
+    def predict_step(self, batch: tuple[Tensor, Tensor] | Tensor, batch_idx: int, dataloader_idx: int = 0) -> torch.Tensor:
+        # batch is (images, labels) from the DataLoader
+        # We only need the images for prediction
+        if isinstance(batch, (list, tuple)):
+            x = batch[0]  # images
+        else:
+            x = batch     # in case it's just images 
+
+        # return self(x)  # returns logits
+
+        logits = self(x)
+        probs = torch.softmax(logits, dim=-1)
+        return probs.argmax(dim=-1)
     
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
@@ -202,6 +216,20 @@ class ResNet(pl.LightningModule):
         self.log('val_loss', loss, on_epoch=True)
         self.log('val_acc', acc, on_epoch=True)
     
+    def predict_step(self, batch: tuple[Tensor, Tensor] | Tensor, batch_idx: int, dataloader_idx: int = 0) -> torch.Tensor:
+        # batch is (images, labels) from the DataLoader
+        # We only need the images for prediction
+        if isinstance(batch, (list, tuple)):
+            x = batch[0]  # images
+        else:
+            x = batch     # in case it's just images 
+
+        # return self(x)  # returns logits
+
+        logits = self(x)
+        probs = torch.softmax(logits, dim=-1)
+        return probs.argmax(dim=-1)
+
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
@@ -209,7 +237,7 @@ class ResNet(pl.LightningModule):
 # 3. EfficientNet Wrapper Model
 class EfficientNet(pl.LightningModule):
     """EfficientNet model from torchvision. Based on this paper: https://arxiv.org/abs/1905.11946"""
-    def __init__(self, num_classes = 2, model_size: str = 'b5', lr: float = 1e-3, use_bn : bool = True, pretrained: bool = True, freeze_backbone: bool = False):
+    def __init__(self, num_classes = 2, model_size: str = 'b4', lr: float = 1e-3, use_bn : bool = True, pretrained: bool = True, freeze_backbone: bool = False):
         super().__init__()
 
         # 0 . Define helper
@@ -281,6 +309,20 @@ class EfficientNet(pl.LightningModule):
         # on_epoch=True to log epoch-level metrics
         self.log('val_loss', loss, on_epoch=True)
         self.log('val_acc', acc, on_epoch=True)
+    
+    def predict_step(self, batch: tuple[Tensor, Tensor] | Tensor, batch_idx: int, dataloader_idx: int = 0) -> torch.Tensor:
+        # batch is (images, labels) from the DataLoader
+        # We only need the images for prediction
+        if isinstance(batch, (list, tuple)):
+            x = batch[0]  # images
+        else:
+            x = batch     # in case it's just images 
+
+        # return self(x)  # returns logits
+
+        logits = self(x)
+        probs = torch.softmax(logits, dim=-1)
+        return probs.argmax(dim=-1)
     
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
