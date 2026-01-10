@@ -1,0 +1,14 @@
+md5: 05d177c96052c4f680e7b19a4b24c754
+frozen: true
+deps:
+- md5: 2013928b7b29f0493ea8df10b776e4a2.dir
+  size: 43
+  nfiles: 2
+  hash: md5
+  path: gs://skin_cancer_data_set
+outs:
+- md5: 57ef3abb56fb730e2a79ac242dfe80ec.dir
+  size: 43
+  nfiles: 2
+  hash: md5
+  path: raw
