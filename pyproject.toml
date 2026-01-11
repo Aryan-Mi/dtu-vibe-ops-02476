@@ -21,7 +21,7 @@ dependencies = [
     "dvc>=3.66.1",
     "dvc-gdrive>=3.0.1",
     "dvc-gs>=3.0.0",
-    "fastapi==0.115.6",
+    "fastapi==0.128.0",
     "torch==2.2.2",
     "torchvision==0.17.2",
     "lightning>=2.0.0,<2.3.0",
