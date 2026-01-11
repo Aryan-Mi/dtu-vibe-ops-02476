@@ -30,7 +30,11 @@ paths:
 data:
   num_classes: 2
   input_channel: 3
-  train_val_split: 0.8
+  # Data split configuration:
+  # - 70% for train+val, 30% for test
+  # - Of the 70% train+val: 75% train (52.5% of total), 25% val (17.5% of total)
+  test_split: 0.3           # 30% reserved for final testing
+  train_val_split: 0.75     # 75% of remaining data for training, 25% for validation
   seed: 42
   # TODO: Add augmentation parameters when needed
   # augmentation:
