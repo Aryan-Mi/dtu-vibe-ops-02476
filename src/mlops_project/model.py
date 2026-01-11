@@ -33,7 +33,7 @@ class ConvBlock(nn.Module):
 
     def __init__(self, in_ch: int, out_ch: int, use_bn: bool = True):
         super().__init__()
-        layers = [nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1)]
+        layers: list[nn.Module] = [nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1)]
 
         if use_bn:
             layers.append(nn.BatchNorm2d(out_ch))
@@ -44,6 +44,7 @@ class ConvBlock(nn.Module):
         self.net = nn.Sequential(*layers)
 
     def forward(self, x):
+        """Forward pass of the ConvBlock."""
         return self.net(x)
 
 
@@ -55,14 +56,16 @@ class BaselineCNN(pl.LightningModule):
         num_classes: int = 2,
         input_dim: int = 456,
         input_channel: int = 3,
-        output_channels: list = [8, 16, 32],
+        output_channels: list[int] | None = None,
         lr: float = 1e-3,
         use_bn: bool = True,
     ):
+        if output_channels is None:
+            output_channels = [8, 16, 32]
         super().__init__()
 
         # 1. Stack Conv Blocks
-        layers = []
+        layers: list[nn.Module] = []
         cin = input_channel
         for cout in output_channels:
             layers.append(ConvBlock(cin, cout, use_bn))
@@ -88,9 +91,11 @@ class BaselineCNN(pl.LightningModule):
         self.lr = lr
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass of the BaselineCNN model."""
         return self.model(x)  # Returns the logits.
 
     def training_step(self, batch: tuple, batch_idx):
+        """Training step for the BaselineCNN model."""
         data, target = batch
         logits = self(data)
 
@@ -105,6 +110,7 @@ class BaselineCNN(pl.LightningModule):
         return loss
 
     def validation_step(self, batch: tuple) -> None:
+        """Validation step for the BaselineCNN model."""
         data, target = batch
         logits = self(data)
 
@@ -119,12 +125,10 @@ class BaselineCNN(pl.LightningModule):
     def predict_step(
         self, batch: tuple[Tensor, Tensor] | Tensor, batch_idx: int, dataloader_idx: int = 0
     ) -> torch.Tensor:
+        """Prediction step for the BaselineCNN model."""
         # batch is (images, labels) from the DataLoader
         # We only need the images for prediction
-        if isinstance(batch, (list, tuple)):
-            x = batch[0]  # images
-        else:
-            x = batch  # in case it's just images
+        x = batch[0] if isinstance(batch, (list, tuple)) else batch
 
         # return self(x)  # returns logits
 
@@ -133,13 +137,14 @@ class BaselineCNN(pl.LightningModule):
         return probs.argmax(dim=-1)
 
     def configure_optimizers(self):
+        """Configure optimizers for the BaselineCNN model."""
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
 
 
 # 2. ResNet Model
 class ResidualBlock(nn.Module):
-    """ResNet Residual Block. Credits to : https://d2l.ai/chapter_convolutional-modern/resnet.html"""
+    """ResNet Residual Block. Credits to : https://d2l.ai/chapter_convolutional-modern/resnet.html."""
 
     def __init__(self, in_ch: int, out_ch: int, stride: int = 1, use_bn: bool = True):
         super().__init__()
@@ -149,7 +154,7 @@ class ResidualBlock(nn.Module):
             return nn.BatchNorm2d(c) if use_bn else nn.Identity()
 
         # 2. Define branches / layers
-        branch_layers = [nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1, stride=stride)]
+        branch_layers: list[nn.Module] = [nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1, stride=stride)]
         branch_layers.append(bn(out_ch))
         branch_layers.append(nn.ReLU())
         branch_layers.append(nn.Conv2d(out_ch, out_ch, kernel_size=3, padding=1))
@@ -164,12 +169,11 @@ class ResidualBlock(nn.Module):
         self.final_relu = nn.ReLU()
 
     def forward(self, x):
+        """Forward pass of the ResidualBlock."""
         input = x
         branch_one_out = self.branch(x)
-
         merged_input = branch_one_out + self.downsample(input)
-        out = self.final_relu(merged_input)
-        return out
+        return self.final_relu(merged_input)
 
 
 class ResNet(pl.LightningModule):
@@ -188,16 +192,21 @@ class ResNet(pl.LightningModule):
         num_classes=2,
         input_channel: int = 3,
         base_channel: int = 32,
-        output_channels: list = [8, 16, 32],
-        strides: list = [1, 2, 2],
+        output_channels: list[int] | None = None,
+        strides: list[int] | None = None,
         dropout=0.1,
         lr: float = 1e-3,
         use_bn: bool = True,
     ):
+        if strides is None:
+            strides = [1, 2, 2]
+        if output_channels is None:
+            output_channels = [8, 16, 32]
+
         super().__init__()
 
         # 1. Initial Layers
-        Layers = [
+        layers = [
             nn.Conv2d(input_channel, base_channel, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(base_channel) if use_bn else nn.Identity(),
             nn.ReLU(),
@@ -207,25 +216,27 @@ class ResNet(pl.LightningModule):
         # 2. Stack Residual Blocks
         in_ch = base_channel
         for cout, stride in zip(output_channels, strides):
-            Layers.append(ResidualBlock(in_ch, cout, stride=stride, use_bn=use_bn))
+            layers.append(ResidualBlock(in_ch, cout, stride=stride, use_bn=use_bn))
             in_ch = cout
 
         # 3. Final Classifier
-        Layers.append(nn.AdaptiveAvgPool2d(1))  # Global average pooling. Will output (batch_size, channels, 1, 1)
-        Layers.append(nn.Flatten())
-        Layers.append(nn.Dropout(dropout) if dropout and dropout > 0 else nn.Identity())
-        Layers.append(nn.Linear(output_channels[-1], num_classes))
+        layers.append(nn.AdaptiveAvgPool2d(1))  # Global average pooling. Will output (batch_size, channels, 1, 1)
+        layers.append(nn.Flatten())
+        layers.append(nn.Dropout(dropout) if dropout and dropout > 0 else nn.Identity())
+        layers.append(nn.Linear(output_channels[-1], num_classes))
 
-        self.net = nn.Sequential(*Layers)
+        self.net = nn.Sequential(*layers)
 
         # 3. Loss function & learning rate
         self.criterion = nn.CrossEntropyLoss()
         self.lr = lr
 
     def forward(self, x):
+        """Forward pass of the ResNet model."""
         return self.net(x)
 
     def training_step(self, batch: tuple, batch_idx):
+        """Training step for the ResNet model."""
         data, target = batch
         logits = self(data)
 
@@ -240,6 +251,7 @@ class ResNet(pl.LightningModule):
         return loss
 
     def validation_step(self, batch: tuple) -> None:
+        """Validation step for the ResNet model."""
         data, target = batch
         logits = self(data)
 
@@ -254,12 +266,11 @@ class ResNet(pl.LightningModule):
     def predict_step(
         self, batch: tuple[Tensor, Tensor] | Tensor, batch_idx: int, dataloader_idx: int = 0
     ) -> torch.Tensor:
+        """Prediction step for the ResNet model."""
         # batch is (images, labels) from the DataLoader
         # We only need the images for prediction
-        if isinstance(batch, (list, tuple)):
-            x = batch[0]  # images
-        else:
-            x = batch  # in case it's just images
+
+        x = batch[0] if isinstance(batch, (list, tuple)) else batch
 
         # return self(x)  # returns logits
 
@@ -268,13 +279,14 @@ class ResNet(pl.LightningModule):
         return probs.argmax(dim=-1)
 
     def configure_optimizers(self):
+        """Configure optimizers for the ResNet model."""
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
 
 
 # 3. EfficientNet Wrapper Model
 class EfficientNet(pl.LightningModule):
-    """EfficientNet model from torchvision. Based on this paper: https://arxiv.org/abs/1905.11946"""
+    """EfficientNet model from torchvision. Based on this paper: https://arxiv.org/abs/1905.11946."""
 
     def __init__(
         self,
@@ -307,7 +319,8 @@ class EfficientNet(pl.LightningModule):
             "b7": (models.efficientnet_b7, EfficientNet_B7_Weights),
         }
         if model_size not in efficientnet_configs:
-            raise ValueError(f"Unsupported size: {model_size}")
+            msg = f"Unsupported size: {model_size}"
+            raise ValueError(msg)
 
         self.model = efficientnet_configs[model_size][0](
             weights=efficientnet_configs[model_size][1].DEFAULT if pretrained else None
@@ -331,9 +344,11 @@ class EfficientNet(pl.LightningModule):
         self.lr = lr
 
     def forward(self, x):
+        """Forward pass of the EfficientNet model."""
         return self.model(x)
 
     def training_step(self, batch: tuple, batch_idx):
+        """Training step for the ResNet model."""
         data, target = batch
         logits = self(data)
 
@@ -348,6 +363,7 @@ class EfficientNet(pl.LightningModule):
         return loss
 
     def validation_step(self, batch: tuple) -> None:
+        """Validation step for the ResNet model."""
         data, target = batch
         logits = self(data)
 
@@ -360,14 +376,15 @@ class EfficientNet(pl.LightningModule):
         self.log("val_acc", acc, on_epoch=True)
 
     def predict_step(
-        self, batch: tuple[Tensor, Tensor] | Tensor, batch_idx: int, dataloader_idx: int = 0
+        self,
+        batch: tuple[Tensor, Tensor] | Tensor,
+        batch_idx: int,
+        dataloader_idx: int = 0,
     ) -> torch.Tensor:
+        """Prediction step for the ResNet model."""
         # batch is (images, labels) from the DataLoader
         # We only need the images for prediction
-        if isinstance(batch, (list, tuple)):
-            x = batch[0]  # images
-        else:
-            x = batch  # in case it's just images
+        x = batch[0] if isinstance(batch, (list, tuple)) else batch
 
         # return self(x)  # returns logits
 
@@ -376,6 +393,7 @@ class EfficientNet(pl.LightningModule):
         return probs.argmax(dim=-1)
 
     def configure_optimizers(self):
+        """Configure optimizers for the EfficientNet model."""
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
 
