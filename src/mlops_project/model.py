@@ -2,6 +2,7 @@ import pytorch_lightning as pl
 import torch
 from torch import Tensor, nn
 from torchvision import models
+from typing import List
 from torchvision.models import (
     EfficientNet_B0_Weights,
     EfficientNet_B1_Weights,
@@ -54,7 +55,7 @@ class BaselineCNN(pl.LightningModule):
     def __init__(
         self,
         num_classes: int = 2,
-        input_dim: int = 456,
+        input_dim: int = 224,
         input_channel: int = 3,
         output_channels: list[int] | None = None,
         lr: float = 1e-3,
@@ -397,7 +398,112 @@ class EfficientNet(pl.LightningModule):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
 
+def test_model_input_sizes_and_training(
+    model_name: str,
+    num_classes: int = 2,
+    batch_size: int = 2,
+    device: str = "cuda" if torch.cuda.is_available() else "cpu",
+) -> None:
+    """
+    Tests model instantiation, forward pass and training step
+    for different input sizes and (for CNN/ResNet) different depths.
+    """
+    print(f"\n=== Testing {model_name} on device: {device} ===")
+    depth_config = [
+        ([16, 32, 64],          [1, 2, 2]),          # 3 layers
+        ([16, 32, 64, 128],     [1, 1, 2, 2]),      # 4 layers
+        ([16, 32, 64, 128, 256],[1, 1, 2, 1, 2]),   # 5 layers
+    ]
+    
+    if model_name == "EfficientNet":
+        for size_key in INPUT_SIZE:
+            test_single_config(model_name, size_key, INPUT_SIZE[size_key], None, None,
+                                num_classes, batch_size, device)
+
+    else:
+        # BaselineCNN & ResNet
+        for size_key in INPUT_SIZE:
+            for channels, strides in depth_config:
+                test_single_config(model_name, size_key, INPUT_SIZE[size_key],
+                                    channels, strides,
+                                    num_classes, batch_size, device)
+
+def test_single_config(
+    model_name: str,
+    size_key: str,
+    expected_size: int,
+    channels: List[int] | None,
+    strides: List[int] | None,
+    num_classes: int,
+    batch_size: int,
+    device: str,
+) -> None:
+    desc = f"{size_key} ({expected_size}x{expected_size})"
+    if channels:
+        desc += f" | depth={len(channels)} ch={channels}"
+
+    print(f"{desc} ... ", end="", flush=True)
+
+    try:
+        # 1. Instantiate model
+        if model_name == "EfficientNet":
+            model = EfficientNet(
+                num_classes=num_classes,
+                model_size=size_key,
+                pretrained=False,
+            )
+        elif model_name == "BaselineCNN":
+            model = BaselineCNN(
+                num_classes=num_classes,
+                input_dim=expected_size,
+                output_channels=channels,
+            )
+        elif model_name == "ResNet":
+            model = ResNet(
+                num_classes=num_classes,
+                output_channels=channels,
+                strides=strides,
+            )
+        else:
+            raise ValueError(f"Unknown model: {model_name}")
+
+        model = model.to(device)
+
+        # 2. Create dummy input and target
+        x = torch.randn(batch_size, 3, expected_size, expected_size, device=device)
+        y = torch.randint(0, num_classes, (batch_size,), device=device)
+
+        # 3. Inference check - Check output shape
+        model.eval()
+        with torch.inference_mode():
+            output = model(x)
+        expected_shape = (batch_size, num_classes)
+        if output.shape != expected_shape:
+            raise RuntimeError(f"Output shape mismatch: {output.shape} ≠ {expected_shape}")
+
+        # 4. Training check - One training step
+        model.train()
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+        criterion = nn.CrossEntropyLoss()
+
+        optimizer.zero_grad()
+        logits = model(x)
+        loss = criterion(logits, y)
+        loss.backward()
+        optimizer.step()
+
+        print("PASSED")
+
+    except RuntimeError as e:
+        if "out of memory" in str(e).lower():
+            print("Out of memory...")
+        else:
+            print(f"FAILED. {str(e)}")
+    except Exception as e:
+        print(f"FAILED. {str(e)}")
 
 if __name__ == "__main__":
-    model = BaselineCNN()
-    print(model)
+    # Run tests for each model
+    test_model_input_sizes_and_training("BaselineCNN")
+    test_model_input_sizes_and_training("ResNet")
+    test_model_input_sizes_and_training("EfficientNet")
