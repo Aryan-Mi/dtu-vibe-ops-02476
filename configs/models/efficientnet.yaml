@@ -1,0 +1,32 @@
+# EfficientNet Configuration
+num_classes: 2
+model_size: "b4"  # Options: b0, b1, b2, b3, b4, b5, b6, b7
+lr: 0.0001  # Lower learning rate for pretrained models
+use_bn: true
+pretrained: true
+freeze_backbone: false
+
+# Input sizes for each model variant (automatically handled by model)
+# b0: 224, b1: 240, b2: 260, b3: 300, b4: 380, b5: 456, b6: 528, b7: 600
+
+# Alternative configurations for experimentation
+variants:
+  lightweight:
+    model_size: "b0"
+    lr: 0.001
+    pretrained: false
+  balanced:
+    model_size: "b3"
+    lr: 0.0001
+    pretrained: true
+    freeze_backbone: false
+  powerful:
+    model_size: "b5"
+    lr: 0.00005
+    pretrained: true
+    freeze_backbone: false
+  transfer_learning:
+    model_size: "b4"
+    lr: 0.0001
+    pretrained: true
+    freeze_backbone: true  # Freeze backbone for transfer learning
