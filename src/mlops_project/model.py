@@ -289,7 +289,7 @@ class EfficientNet(pl.LightningModule):
     def __init__(
         self,
         num_classes=2,
-        model_size: str = "b4",
+        model_size: str = "b0",
         lr: float = 1e-3,
         use_bn: bool = True,
         pretrained: bool = True,

@@ -16,8 +16,8 @@ WORKDIR /
 RUN uv sync --frozen
 
 # 4. Set entrypoint to training script
-ENTRYPOINT ["uv", "run", "src/mlops_project/train.py"]
+ENTRYPOINT ["uv", "run", "src/mlops_project/evaluate.py"]
 
 # Docker commands to build and run the training container:
-# docker build -f dockerfiles/train.dockerfile -t train:latest .
-# docker run --name experimentName -v ${PWD}/models:/models/ -v ${PWD}/data/raw:/data/raw -v ${PWD}/data/processed:/data/processed train:latest
+# docker build -f dockerfiles/evaluate.dockerfile -t evaluate:latest .
+# docker run --name experimentName -v ${PWD}/models:/models/ -v ${PWD}/data/raw:/data/raw -v ${PWD}/data/processed:/data/processed evaluate:latest
