@@ -2,7 +2,6 @@ import pytorch_lightning as pl
 import torch
 from torch import Tensor, nn
 from torchvision import models
-from typing import List
 from torchvision.models import (
     EfficientNet_B0_Weights,
     EfficientNet_B1_Weights,
@@ -139,8 +138,7 @@ class BaselineCNN(pl.LightningModule):
 
     def configure_optimizers(self):
         """Configure optimizers for the BaselineCNN model."""
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
-        return optimizer
+        return torch.optim.Adam(self.parameters(), lr=self.lr)
 
 
 # 2. ResNet Model
@@ -171,9 +169,9 @@ class ResidualBlock(nn.Module):
 
     def forward(self, x):
         """Forward pass of the ResidualBlock."""
-        input = x
+        original_input = x
         branch_one_out = self.branch(x)
-        merged_input = branch_one_out + self.downsample(input)
+        merged_input = branch_one_out + self.downsample(original_input)
         return self.final_relu(merged_input)
 
 
@@ -281,8 +279,7 @@ class ResNet(pl.LightningModule):
 
     def configure_optimizers(self):
         """Configure optimizers for the ResNet model."""
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
-        return optimizer
+        return torch.optim.Adam(self.parameters(), lr=self.lr)
 
 
 # 3. EfficientNet Wrapper Model
@@ -395,49 +392,50 @@ class EfficientNet(pl.LightningModule):
 
     def configure_optimizers(self):
         """Configure optimizers for the EfficientNet model."""
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
-        return optimizer
+        return torch.optim.Adam(self.parameters(), lr=self.lr)
+
 
 def test_model_input_sizes_and_training(
     model_name: str,
-    num_classes: int = 2,
-    batch_size: int = 2,
-    device: str = "cuda" if torch.cuda.is_available() else "cpu",
+    num_classes: int,
+    batch_size: int,
+    device: str,
 ) -> None:
-    """
-    Tests model instantiation, forward pass and training step
-    for different input sizes and (for CNN/ResNet) different depths.
+    """Tests model instantiation, forward pass and training step for different input sizes.
+
+    Also tests different depths for CNN/ResNet models.
     """
     print(f"\n=== Testing {model_name} on device: {device} ===")
     depth_config = [
-        ([16, 32, 64],          [1, 2, 2]),          # 3 layers
-        ([16, 32, 64, 128],     [1, 1, 2, 2]),      # 4 layers
-        ([16, 32, 64, 128, 256],[1, 1, 2, 1, 2]),   # 5 layers
+        ([16, 32, 64], [1, 2, 2]),  # 3 layers
+        ([16, 32, 64, 128], [1, 1, 2, 2]),  # 4 layers
+        ([16, 32, 64, 128, 256], [1, 1, 2, 1, 2]),  # 5 layers
     ]
-    
+
     if model_name == "EfficientNet":
         for size_key in INPUT_SIZE:
-            test_single_config(model_name, size_key, INPUT_SIZE[size_key], None, None,
-                                num_classes, batch_size, device)
+            test_single_config(model_name, size_key, INPUT_SIZE[size_key], None, None, num_classes, batch_size, device)
 
     else:
         # BaselineCNN & ResNet
         for size_key in INPUT_SIZE:
             for channels, strides in depth_config:
-                test_single_config(model_name, size_key, INPUT_SIZE[size_key],
-                                    channels, strides,
-                                    num_classes, batch_size, device)
+                test_single_config(
+                    model_name, size_key, INPUT_SIZE[size_key], channels, strides, num_classes, batch_size, device
+                )
+
 
 def test_single_config(
     model_name: str,
     size_key: str,
     expected_size: int,
-    channels: List[int] | None,
-    strides: List[int] | None,
+    channels: list[int] | None,
+    strides: list[int] | None,
     num_classes: int,
     batch_size: int,
     device: str,
 ) -> None:
+    """Test function for a single model configuration."""
     desc = f"{size_key} ({expected_size}x{expected_size})"
     if channels:
         desc += f" | depth={len(channels)} ch={channels}"
@@ -465,7 +463,8 @@ def test_single_config(
                 strides=strides,
             )
         else:
-            raise ValueError(f"Unknown model: {model_name}")
+            msg = f"Unknown model: {model_name}"
+            raise ValueError(msg)
 
         model = model.to(device)
 
@@ -479,7 +478,8 @@ def test_single_config(
             output = model(x)
         expected_shape = (batch_size, num_classes)
         if output.shape != expected_shape:
-            raise RuntimeError(f"Output shape mismatch: {output.shape} ≠ {expected_shape}")
+            msg = f"Output shape mismatch: {output.shape} ≠ {expected_shape}"
+            raise RuntimeError(msg)
 
         # 4. Training check - One training step
         model.train()
@@ -499,11 +499,13 @@ def test_single_config(
             print("Out of memory...")
         else:
             print(f"FAILED. {str(e)}")
-    except Exception as e:
+    except (ValueError, TypeError, AttributeError) as e:
         print(f"FAILED. {str(e)}")
+
 
 if __name__ == "__main__":
     # Run tests for each model
-    test_model_input_sizes_and_training("BaselineCNN")
-    test_model_input_sizes_and_training("ResNet")
-    test_model_input_sizes_and_training("EfficientNet")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    test_model_input_sizes_and_training("BaselineCNN", num_classes=2, batch_size=2, device=device)
+    test_model_input_sizes_and_training("ResNet", num_classes=2, batch_size=2, device=device)
+    test_model_input_sizes_and_training("EfficientNet", num_classes=2, batch_size=2, device=device)
