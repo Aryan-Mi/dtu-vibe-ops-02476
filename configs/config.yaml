@@ -1,0 +1,51 @@
+# Hydra Defaults - Specifies which config files to load from config groups
+defaults:
+  - models: efficientnet     # loads configs/models/efficientnet.yaml
+  - optimizers: adam         # loads configs/optimizers/adam.yaml
+  - _self_                   # keeps overrides from this file
+
+# Training Configuration
+training:
+  max_epochs: 50
+  batch_size: 32
+  num_workers: 4
+  accelerator: "auto"  # auto, gpu, cpu, mps
+  devices: 1
+  precision: 32  # 16, 32, or "bf16"
+  # NOTE: Uncomment/adjust the following parameters when needed
+  # gradient_clip_val: 1.0
+  # accumulate_grad_batches: 1
+  # log_every_n_steps: 10
+
+# Paths
+paths:
+  data_dir: "data"
+  raw_data_dir: "data/raw"
+  processed_data_dir: "data/processed"
+  model_dir: "models"
+  output_dir: "outputs"
+  log_dir: "logs"
+
+# Data Configuration
+data:
+  num_classes: 2
+  input_channel: 3
+  train_val_split: 0.8
+  seed: 42
+  # TODO: Add augmentation parameters when needed
+  # augmentation:
+
+
+# Potential Additional Configurations for Future Use
+# --------------------------------------------------
+# Learning Rate Scheduler Configuration
+# scheduler:
+
+# Early Stopping Configuration
+# early_stopping:
+
+# Checkpoint Configuration
+# checkpoint:
+
+# Logging Configuration
+# logging: TODO: Add when needed
