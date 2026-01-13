@@ -173,7 +173,8 @@ def create_dataloaders(
 
 
 # Copying dataloader function and modifying for subsample purposes here...
-# It may be more efficient long term to have the dataloader function take an input variable representing subsampling (with 0 or 1 meaning no subsampling).
+# It may be more efficient long term to have the dataloader function take an input
+# variable representing subsampling (with 0 or 1 meaning no subsampling).
 def subsample_dataloader(
     data_path: str,
     subsample_result: dict,
@@ -192,7 +193,7 @@ def subsample_dataloader(
 
     # get list of image_ids
     subsampled_image_ids = []
-    for category, images in subsample_result.items():
+    for _category, images in subsample_result.items():
         subsampled_image_ids.extend([img["image_id"] for img in images])
     # retrieve subsample indices
     subsampled_indices = metadata[metadata["image_id"].isin(subsampled_image_ids)].index.tolist()
