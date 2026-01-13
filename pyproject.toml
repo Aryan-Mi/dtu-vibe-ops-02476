@@ -22,13 +22,15 @@ dependencies = [
     "dvc-gdrive>=3.0.1",
     "dvc-gs>=3.0.0",
     "fastapi==0.115.6",
-    "torch==2.6.0",
-    "torchvision>=0.21.0",
-    "lightning>=2.6.0",
+    "torch==2.2.2",
+    "torchvision==0.17.2",
+    "lightning>=2.0.0,<2.3.0",
     "pandas>=2.3.3",
     "scikit-learn>=1.8.0",
     "typer==0.15.1",
     "uvicorn==0.34.0",
+    "wandb>=0.23.1",
+    "hydra-core>=1.3.2",
 ]
 
 [dependency-groups]
@@ -45,9 +47,9 @@ dev = [
 
 
 [tool.uv.sources]
-# torch = [
-#     { index = "pytorch-cpu" },
-# ]
+torch = [
+    { index = "pytorch-cpu" },
+]
 torchvision = [
     { index = "pytorch-cpu" },
 ]
@@ -107,6 +109,8 @@ lint.ignore = [
   "B905",
   "COM812",
   "D100",
+  "D103",
+  "D104",
   "D107",
   "D211",
   "D212",
