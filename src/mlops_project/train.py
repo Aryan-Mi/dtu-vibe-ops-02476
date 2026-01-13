@@ -115,6 +115,7 @@ def train_model(
 # Creation of CLI interaction with train.py (vibecoded)
 @app.command()
 def train(
+    model_name: str = typer.Option(..., help="Model to train:BaselineCNN, ResNet, or EfficientNet"),
     data_path: str = typer.Option("data/raw/ham10000", help="Path to the data folder"),
     output_dir: str = typer.Option("outputs/models", help="Directory to save trained models"),
     subsample_percentage: float | None = typer.Option(None, help="Percentage of data to subsample (0.0-1.0)"),
@@ -126,6 +127,10 @@ def train(
     learning_rate: float = typer.Option(1e-3, help="Learning rate"),
     num_classes: int = typer.Option(7, help="Number of classes (7 for HAM10000)"),
     random_seed: int = typer.Option(42, help="Random seed for reproducibility"),
+    #model-specific config options
+    efficientnet_size: str = typer.Option("b0", help="EfficientNet model size (b0-b7)"),
+    pretrained: bool = typer.Option(True, help="Use pretrained weights (for ResNet/EfficientNet)"),
+    freeze_backbone: bool = typer.Option(False, help="Freeze backbone layers (for ResNet/EfficientNet)"),
 ) -> None:
     set_seed(random_seed)
 
@@ -169,98 +174,82 @@ def train(
             random_seed=random_seed,
         )
 
-    # Step 2: Define models to train
-    print("\n[2/5] Initializing models...")
+    # Step 2: Define model to train
+    print(f"\n[2/5] Initializing {model_name}...")
 
-    models_to_train = {
-        "BaselineCNN": BaselineCNN(
+    # Validate and create the specified model
+    if model_name == "BaselineCNN":
+        model = BaselineCNN(
             num_classes=num_classes,
             lr=learning_rate,
-        ),
-        "ResNet": ResNet(
+        )
+    elif model_name == "ResNet":
+        model = ResNet(
             num_classes=num_classes,
             lr=learning_rate,
-        ),
-        "EfficientNet_B0": EfficientNet(
+            pretrained=pretrained,
+            freeze_backbone=freeze_backbone,
+        )
+    elif model_name == "EfficientNet":
+        model = EfficientNet(
             num_classes=num_classes,
-            model_size="b0",
+            model_size=efficientnet_size,
             lr=learning_rate,
-            pretrained=True,
-            freeze_backbone=False,
-        ),
-    }
+            pretrained=pretrained,
+            freeze_backbone=freeze_backbone,
+        )
+    else:
+        print(f"  ERROR: Unknown model '{model_name}'. Choose from: BaselineCNN, ResNet, EfficientNet")
+        return
 
-    print(f"  Models to train: {', '.join(models_to_train.keys())}")
+    print(f"  Model: {model_name}")
+    if model_name in ["ResNet", "EfficientNet"]:
+        print(f"    Pretrained: {pretrained}")
+        print(f"    Freeze backbone: {freeze_backbone}")
+    if model_name == "EfficientNet":
+        print(f"    Model size: {efficientnet_size}")
 
     # Step 3: Train all models
     print("\n[3/5] Training models...")
-    trained_models = {}
-    training_metrics = {}
-
-    for model_name, model in models_to_train.items():
-        try:
-            trained_model, metrics = train_model(
-                model=model,
-                train_loader=train_loader,
-                val_loader=val_loader,
-                model_name=model_name,
-                epochs=max_epochs,
-                output_dir=output_dir,
-            )
-            trained_models[model_name] = trained_model
-            training_metrics[model_name] = metrics
-        except Exception as e:
-            print(f"  ERROR: Failed to train {model_name}: {str(e)}")
-            continue
+    try:
+        trained_model, training_metrics = train_model(
+            model=model,
+            train_loader=train_loader,
+            val_loader=val_loader,
+            model_name=model_name,
+            epochs=max_epochs,
+            output_dir=output_dir,
+        )
+    except Exception as e:
+        print(f"  ERROR: Failed to train {model_name}: {str(e)}")
+        return
 
     # Step 4: Evaluate all models on test set
     print("\n[4/5] Evaluating models on test set...")
-    evaluation_results = {}
-
-    for model_name, model in trained_models.items():
-        try:
-            eval_metrics = evaluate(model=model, test_loader=test_loader, model_name=model_name)
-            evaluation_results[model_name] = eval_metrics
-        except Exception as e:
-            print(f"  ERROR: Failed to evaluate {model_name}: {str(e)}")
-            continue
+    try:
+        evaluation_results = evaluate(model=trained_model, test_loader=test_loader, model_name=model_name)
+    except Exception as e:
+        print(f"  ERROR: Failed to evaluate {model_name}: {str(e)}")
+        return
 
     # Step 5: Select best model and save results
     print("\n[5/5] Selecting best model...")
 
-    if not evaluation_results:
-        print("  ERROR: No models were successfully trained and evaluated!")
-        return
-
-    # Find best model based on test accuracy
-    best_model_name = max(evaluation_results, key=lambda k: evaluation_results[k]["test_accuracy"])
-    best_accuracy = evaluation_results[best_model_name]["test_accuracy"]
-
     print("\n" + "=" * 80)
     print("TRAINING SUMMARY")
     print("=" * 80)
-    print("\nModel Comparison:")
-    print(f"{'Model':<20} {'Val Loss':<12} {'Test Accuracy':<15}")
-    print("-" * 50)
-
-    for model_name in trained_models.keys():
-        val_loss = training_metrics[model_name]["best_val_loss"]
-        test_acc = evaluation_results[model_name]["test_accuracy"]
-        marker = " ← BEST" if model_name == best_model_name else ""
-        print(f"{model_name:<20} {val_loss:<12.4f} {test_acc:<15.4f}{marker}")
-
-    print("\n" + "=" * 80)
-    print(f"BEST MODEL: {best_model_name}")
-    print(f"Test Accuracy: {best_accuracy:.4f}")
+    print(f"\nModel: {model_name}")
+    print(f"Validation Loss: {training_metrics['best_val_loss']:.4f}")
+    print(f"Test Accuracy: {evaluation_results['test_accuracy']:.4f}")
     print("=" * 80)
 
     # Save results summary
     results_path = Path(output_dir) / "training_results.json"
     results = {
-        "best_model": best_model_name,
-        "best_test_accuracy": best_accuracy,
-        "training_metrics": training_metrics,
-        # "evaluation_results": {k: {**v, "per_class_accuracy": str(v["per_class_accuracy"])} for k, v in evaluation_results.items()},
+        "model": model_name,
+        "test_accuracy": evaluation_results['test_accuracy'],
+        "val_loss": training_metrics['best_val_loss'],
+        "checkpoint_path": training_metrics['checkpoint_path'],
         "configuration": {
             "data_path": data_path,
             "subsample_percentage": subsample_percentage,
@@ -269,6 +258,9 @@ def train(
             "max_epochs": max_epochs,
             "learning_rate": learning_rate,
             "random_seed": random_seed,
+            "efficientnet_size": efficientnet_size if model_name == "EfficientNet" else None,
+            "pretrained": pretrained if model_name in ["ResNet", "EfficientNet"] else None,
+            "freeze_backbone": freeze_backbone if model_name in ["ResNet", "EfficientNet"] else None,
         },
     }
 
@@ -276,17 +268,24 @@ def train(
         json.dump(results, f, indent=2)
 
     print(f"\nResults saved to: {results_path}")
-    print(f"Best model checkpoint: {training_metrics[best_model_name]['checkpoint_path']}")
+    print(f"Model checkpoint: {training_metrics['checkpoint_path']}")
 
 
 if __name__ == "__main__":
     # Example usage:
-    # python [path/to/train.py] --data-path data/raw/ham10000 --output-dir outputs/models --max-epochs 20
+    # Train BaselineCNN:
+    # python train.py --model-name BaselineCNN --data-path data/raw/ham10000 --max-epochs 20
+    #
+    # Train ResNet with pretrained weights:
+    # python train.py --model-name ResNet --pretrained --max-epochs 20
+    #
+    # Train EfficientNet B3 with frozen backbone:
+    # python train.py --model-name EfficientNet --efficientnet-size b3 --freeze-backbone --max-epochs 15
     #
     # With subsampling (30% of data):
-    # python [path/to/train.py] --subsample-percentage 0.3 --max-epochs 10
+    # python train.py --model-name ResNet --subsample-percentage 0.3 --max-epochs 10
     #
     # *BEST FOR QUICK TESTING* (1% data, 5 epochs):
-    # python [path/to/train.py] --subsample-percentage 0.01 --max-epochs 5 --batch-size 16
+    # python train.py --model-name BaselineCNN --subsample-percentage 0.01 --max-epochs 5 --batch-size 16
 
     app()
