@@ -51,9 +51,9 @@ def split_dataset_indices(
     set_seed(random_seed)
 
     # Validate ratios
-    assert (
-        abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6
-    ), f"Ratios must sum to 1.0, got {train_ratio + val_ratio + test_ratio}"
+    assert abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6, (
+        f"Ratios must sum to 1.0, got {train_ratio + val_ratio + test_ratio}"
+    )
 
     # Load metadata
     metadata = pd.read_csv(metadata_path)
@@ -163,10 +163,20 @@ def create_dataloaders(
         pin_memory=True,  # Faster GPU transfer
     )
 
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=True,
+    )
 
     test_loader = DataLoader(
-        test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=True,
     )
 
     return train_loader, val_loader, test_loader
@@ -261,10 +271,20 @@ def subsample_dataloader(
         pin_memory=True,  # Faster GPU transfer
     )
 
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=True,
+    )
 
     test_loader = DataLoader(
-        test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=True,
     )
 
     return train_loader, val_loader, test_loader
