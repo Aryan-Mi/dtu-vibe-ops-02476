@@ -8,7 +8,6 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import CSVLogger
 
 from mlops_project.dataloader import create_dataloaders, set_seed, subsample_dataloader
-from mlops_project.evaluate import evaluate
 from mlops_project.model import BaselineCNN, EfficientNet, ResNet
 from mlops_project.subsample import subsample_dataset
 
@@ -124,7 +123,7 @@ def train(
             random_seed=random_seed,
         )
     else:
-        print("\n[1/5] Loading full dataset...")
+        print("\n[1/4] Loading full dataset...")
         train_loader, val_loader, test_loader = create_dataloaders(
             data_path=data_path,
             image_size=image_size,
@@ -134,7 +133,7 @@ def train(
         )
 
     # Step 2: Define model to train
-    print(f"\n[2/5] Initializing {model_name}...")
+    print(f"\n[2/4] Initializing {model_name}...")
 
     # Validate and create the specified model
     if model_name == "BaselineCNN":
@@ -164,9 +163,9 @@ def train(
         print(f"    Model size: {efficientnet_size}")
 
     # Step 3: Train all models
-    print("\n[3/5] Training models...")
+    print("\n[3/4] Training models...")
     try:
-        trained_model, training_metrics = train_model(
+        _, training_metrics = train_model(
             model=model,
             train_loader=train_loader,
             val_loader=val_loader,
@@ -178,34 +177,20 @@ def train(
         print(f"  ERROR: Failed to train {model_name}: {str(e)}")
         return
 
-    # Step 4: Evaluate all models on test set
-    print("\n[4/5] Evaluating models on test set...")
-    try:
-        evaluation_results = evaluate(
-            model_name=model_name,
-            model=trained_model,
-            test_loader=test_loader,
-        )
-    except Exception as e:  # noqa: BLE001
-        print(f"  ERROR: Failed to evaluate {model_name}: {str(e)}")
-        return
-
-    # Step 5: Select best model and save results
-    print("\n[5/5] Selecting best model...")
+    # Step 4: Select best model and save results
+    print("\n[4/4] Selecting best model...")
 
     print("\n" + "=" * 80)
     print("TRAINING SUMMARY")
     print("=" * 80)
     print(f"\nModel: {model_name}")
     print(f"Validation Loss: {training_metrics['best_val_loss']:.4f}")
-    print(f"Test Accuracy: {evaluation_results['test_accuracy']:.4f}")
     print("=" * 80)
 
     # Save results summary
     results_path = Path(output_dir) / "training_results.json"
     results = {
         "model": model_name,
-        "test_accuracy": evaluation_results["test_accuracy"],
         "val_loss": training_metrics["best_val_loss"],
         "checkpoint_path": training_metrics["checkpoint_path"],
         "configuration": {
