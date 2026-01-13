@@ -51,9 +51,9 @@ def split_dataset_indices(
     set_seed(random_seed)
 
     # Validate ratios
-    assert abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6, (
-        f"Ratios must sum to 1.0, got {train_ratio + val_ratio + test_ratio}"
-    )
+    assert (
+        abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6
+    ), f"Ratios must sum to 1.0, got {train_ratio + val_ratio + test_ratio}"
 
     # Load metadata
     metadata = pd.read_csv(metadata_path)
@@ -130,6 +130,103 @@ def create_dataloaders(
         random_seed=random_seed,
     )
 
+    # Create datasets with appropriate transforms
+    train_dataset = CancerDataset(
+        data_path=str(data_path),
+        transform=get_transforms(image_size=image_size, augment=True),
+        split_indices=train_indices,
+    )
+
+    val_dataset = CancerDataset(
+        data_path=str(data_path),
+        transform=get_transforms(image_size=image_size, augment=False),
+        split_indices=val_indices,
+    )
+
+    test_dataset = CancerDataset(
+        data_path=str(data_path),
+        transform=get_transforms(image_size=image_size, augment=False),
+        split_indices=test_indices,
+    )
+
+    # Create generator for reproducible shuffling
+    generator = torch.Generator()
+    generator.manual_seed(random_seed)
+
+    # Create dataloaders
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+        generator=generator,
+        pin_memory=True,  # Faster GPU transfer
+    )
+
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
+
+    test_loader = DataLoader(
+        test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True
+    )
+
+    return train_loader, val_loader, test_loader
+
+
+# Copying dataloader function and modifying for subsample purposes here...
+# It may be more efficient long term to have the dataloader function take an input variable representing subsampling (with 0 or 1 meaning no subsampling).
+def subsample_dataloader(
+    data_path: str,
+    subsample_result: dict,
+    image_size: int = 224,
+    batch_size: int = 32,
+    num_workers: int = 4,
+    train_ratio: float = 0.525,
+    val_ratio: float = 0.175,
+    test_ratio: float = 0.30,
+    random_seed: int = 42,
+) -> tuple[DataLoader, DataLoader, DataLoader]:
+    set_seed(random_seed)
+
+    metadata_path = data_path + "/metadata" + "/HAM10000_metadata.csv"
+    metadata = pd.read_csv(metadata_path)
+
+    # get list of image_ids
+    subsampled_image_ids = []
+    for category, images in subsample_result.items():
+        subsampled_image_ids.extend([img["image_id"] for img in images])
+    # retrieve subsample indices
+    subsampled_indices = metadata[metadata["image_id"].isin(subsampled_image_ids)].index.tolist()
+    subsampled_metadata = metadata.iloc[subsampled_indices]
+
+    # Get unique lesion IDs
+    unique_lesions = subsampled_metadata["lesion_id"].unique()
+
+    # First split: separate test set
+    train_val_lesions, test_lesions = train_test_split(unique_lesions, test_size=test_ratio, random_state=random_seed)
+
+    # Second split: separate train and validation from remaining data
+    # Calculate validation ratio relative to train+val
+    val_ratio_adjusted = val_ratio / (train_ratio + val_ratio)
+
+    train_lesions, val_lesions = train_test_split(
+        train_val_lesions, test_size=val_ratio_adjusted, random_state=random_seed
+    )
+
+    # Get indices for each split
+    train_indices = metadata[metadata["lesion_id"].isin(train_lesions)].index.tolist()
+    val_indices = metadata[metadata["lesion_id"].isin(val_lesions)].index.tolist()
+    test_indices = metadata[metadata["lesion_id"].isin(test_lesions)].index.tolist()
+
+    print("Dataset split:")
+    print(
+        f"  Train: {len(train_indices)} images ({len(train_lesions)} lesions) - {len(train_indices) / len(metadata) * 100:.1f}%"  # noqa: E501
+    )
+    print(
+        f"  Val:   {len(val_indices)} images ({len(val_lesions)} lesions) - {len(val_indices) / len(metadata) * 100:.1f}%"  # noqa: E501
+    )
+    print(
+        f"  Test:  {len(test_indices)} images ({len(test_lesions)} lesions) - {len(test_indices) / len(metadata) * 100:.1f}%"  # noqa: E501
+    )
     # Create datasets with appropriate transforms
     train_dataset = CancerDataset(
         data_path=str(data_path),
