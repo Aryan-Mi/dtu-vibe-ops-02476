@@ -1,19 +1,19 @@
 import json
 from pathlib import Path
-import pytorch_lightning as pl
-from pytorch_lightning.loggers import CSVLogger
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-from sklearn.model_selection import train_test_split
 
 import pandas as pd
+import pytorch_lightning as pl
 import torch
 import typer
-
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+from pytorch_lightning.loggers import CSVLogger
+from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
-from model import BaselineCNN, ResNet, EfficientNet
-from subsample import subsample_dataset
-from dataloader import create_dataloaders, set_seed
-from data import CancerDataset, get_transforms
+
+from mlops_project.data import CancerDataset, get_transforms
+from mlops_project.dataloader import create_dataloaders, set_seed
+from mlops_project.model import BaselineCNN, EfficientNet, ResNet
+from mlops_project.subsample import subsample_dataset
 
 app = typer.Typer()
 
@@ -32,17 +32,16 @@ def subsample_dataloader(
     test_ratio: float = 0.30,
     random_seed: int = 42,
 ) -> tuple[DataLoader, DataLoader, DataLoader]:
-    
     set_seed(random_seed)
 
     metadata_path = data_path + "/metadata" + "/HAM10000_metadata.csv"
     metadata = pd.read_csv(metadata_path)
 
-    #get list of image_ids
+    # get list of image_ids
     subsampled_image_ids = []
     for category, images in subsample_result.items():
         subsampled_image_ids.extend([img["image_id"] for img in images])
-    #retrieve subsample indices
+    # retrieve subsample indices
     subsampled_indices = metadata[metadata["image_id"].isin(subsampled_image_ids)].index.tolist()
     subsampled_metadata = metadata.iloc[subsampled_indices]
 
@@ -117,32 +116,29 @@ def subsample_dataloader(
     return train_loader, val_loader, test_loader
 
 
-
-
-#Train models written in model.py and store results for comparison and selection of best model.
-#pytorch lightning reference source: https://lightning.ai/pages/community/tutorial/step-by-step-walk-through-of-pytorch-lightning/
+# Train models written in model.py and store results for comparison and selection of best model.
+# pytorch lightning reference source: https://lightning.ai/pages/community/tutorial/step-by-step-walk-through-of-pytorch-lightning/
 def train_model(
     model: pl.LightningModule,
     model_name: str,
-    train_loader, #training dataloader
-    val_loader, #validation dataloader
+    train_loader,  # training dataloader
+    val_loader,  # validation dataloader
     epochs: int = 10,
-    output_dir: str = "outputs/models"
-)-> tuple[pl.LightningModule, dict]:
-    
-    #Troubleshooting purposes - training slower on cpu
+    output_dir: str = "outputs/models",
+) -> tuple[pl.LightningModule, dict]:
+    # Troubleshooting purposes - training slower on cpu
     print(f"CUDA available: {torch.cuda.is_available()}")
     print(f"Device: {torch.device('cuda' if torch.cuda.is_available() else 'cpu')}")
-    
-    #output path for logging and checkpoint purposes
+
+    # output path for logging and checkpoint purposes
     output_path = Path(output_dir) / model_name
     output_path.mkdir(parents=True, exist_ok=True)
 
-    #stop training model when it stops improving
-    early_stopping = EarlyStopping('val_loss', patience=7)
+    # stop training model when it stops improving
+    early_stopping = EarlyStopping("val_loss", patience=7)
 
-    #model checkpoint for saving epoch results during training
-    #For picking the best model and also troubleshooting :)
+    # model checkpoint for saving epoch results during training
+    # For picking the best model and also troubleshooting :)
     checkpoint_callback = ModelCheckpoint(
         dirpath=output_path,
         filename=f"{model_name}-{{epoch:02d}}-{{val_loss:.4f}}",
@@ -152,48 +148,38 @@ def train_model(
         save_last=True,
     )
 
-    #train model
+    # train model
     trainer = pl.Trainer(
         max_epochs=epochs,
         accelerator="auto",
         devices="auto",
-        logger= CSVLogger(save_dir="logs/"),
-		callbacks= [early_stopping, checkpoint_callback]
-        )
-    
+        logger=CSVLogger(save_dir="logs/"),
+        callbacks=[early_stopping, checkpoint_callback],
+    )
+
     print(f"Training {model_name}...")
-    trainer.fit(model,train_loader,val_loader)
-    
+    trainer.fit(model, train_loader, val_loader)
+
     metrics = {
         "model_name": model_name,
         "best_val_loss": float(checkpoint_callback.best_model_score),
         "checkpoint_path": str(checkpoint_callback.best_model_path),
     }
-    
+
     return model, metrics
-    
 
 
-
-#Evaluate and compare training results
-def evaluate(
-    model: pl.LightningModule, 
-    test_loader,
-    model_name: str
-)->dict:
+# Evaluate and compare training results
+def evaluate(model: pl.LightningModule, test_loader, model_name: str) -> dict:
     print(f"\nEvaluating {model_name} on test set...")
-    
-    #train
-    trainer = pl.Trainer(
-        accelerator="auto", 
-        devices=1, 
-        logger=False
-        )
-    
-    #predict
+
+    # train
+    trainer = pl.Trainer(accelerator="auto", devices=1, logger=False)
+
+    # predict
     predictions = trainer.predict(model, test_loader)
 
-    #retrieve label predictions
+    # retrieve label predictions
     all_preds = torch.cat(predictions)
     all_labels = []
     for batch in test_loader:
@@ -201,7 +187,7 @@ def evaluate(
         all_labels.append(labels)
     all_labels = torch.cat(all_labels)
 
-    #Calculate accuracy
+    # Calculate accuracy
     accuracy = (all_preds == all_labels).float().mean().item()
 
     metrics = {
@@ -212,8 +198,6 @@ def evaluate(
     print(f"\tTest Accuracy: {accuracy:.4f}")
 
     return metrics
-
-
 
 
 # Creation of CLI interaction with train.py (vibecoded)
@@ -364,7 +348,7 @@ def train(
         "best_model": best_model_name,
         "best_test_accuracy": best_accuracy,
         "training_metrics": training_metrics,
-        #"evaluation_results": {k: {**v, "per_class_accuracy": str(v["per_class_accuracy"])} for k, v in evaluation_results.items()},
+        # "evaluation_results": {k: {**v, "per_class_accuracy": str(v["per_class_accuracy"])} for k, v in evaluation_results.items()},
         "configuration": {
             "data_path": data_path,
             "subsample_percentage": subsample_percentage,
