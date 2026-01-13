@@ -1,4 +1,4 @@
-import lightning as pl
+import pytorch_lightning as pl
 import torch
 from torch import Tensor, nn
 from torchvision import models
