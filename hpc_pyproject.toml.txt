@@ -129,3 +129,4 @@ lint.pydocstyle.convention = "google"
 
 [tool.coverage.run]
 omit = ["tests/*"]
+

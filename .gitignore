@@ -174,3 +174,10 @@ cython_debug/
 #.idea/
 raw/
 /processed
+
+# HPC error and outputs
+gpu_*.err
+gpu_*.out
+
+logs/
+outputs/
