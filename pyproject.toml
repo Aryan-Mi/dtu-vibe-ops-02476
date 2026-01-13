@@ -22,6 +22,7 @@ dependencies = [
     "dvc-gdrive>=3.0.1",
     "dvc-gs>=3.0.0",
     "fastapi==0.115.6",
+    "numpy>=1.24.0,<2.0.0",  # PyTorch 2.2.2 requires NumPy 1.x
     "torch==2.2.2",
     "torchvision==0.17.2",
     "lightning>=2.0.0,<2.3.0",
@@ -41,6 +42,7 @@ dev = [
     "mkdocs==1.6.1",
     "pre-commit==4.1.0",
     "pytest==8.3.4",
+    "pytest-cov==6.0.0",
     "ruff==0.14.11",
     "mkdocstrings-python==1.12.2",
 ]
@@ -130,4 +132,32 @@ lint.ignore = [
 lint.pydocstyle.convention = "google"
 
 [tool.coverage.run]
-omit = ["tests/*"]
+omit = [
+    "tests/*",
+    "*/__pycache__/*",
+    "*/migrations/*",
+    "*/venv/*",
+    "*/env/*",
+    "setup.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+show_missing = true
+skip_covered = false
+precision = 2
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.coverage.xml]
+output = "coverage.xml"
