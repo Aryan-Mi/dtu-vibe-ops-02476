@@ -1,0 +1,10 @@
+# BaselineCNN Configuration
+name: "BaselineCNN"
+
+# Model parameters (match BaselineCNN.__init__ signature)
+num_classes: ${data.num_classes}  # Interpolated from main config
+input_dim: ${data.image_size}     # Must match image_size for BaselineCNN
+input_channel: 3
+output_channels: [8, 16, 32]      # Number of output channels for each conv block
+lr: 0.001
+use_bn: true

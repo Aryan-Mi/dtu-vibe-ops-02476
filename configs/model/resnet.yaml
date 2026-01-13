@@ -1,0 +1,13 @@
+# ResNet Configuration
+name: "ResNet"
+
+# Model parameters (match ResNet.__init__ signature)
+num_classes: ${data.num_classes}  # Interpolated from main config
+input_channel: 3
+input_dim: null                   # Optional: null means flexible spatial size
+base_channel: 32
+output_channels: [64, 128, 256]   # Channels for each residual block
+strides: [1, 2, 2]                # Stride for each block (1=no downsample, 2=downsample)
+dropout: 0.1
+lr: 0.001
+use_bn: true
