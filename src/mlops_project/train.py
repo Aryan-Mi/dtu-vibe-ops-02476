@@ -1,17 +1,13 @@
 import json
 from pathlib import Path
 
-import pandas as pd
 import pytorch_lightning as pl
 import torch
 import typer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import CSVLogger
-from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader
 
-from mlops_project.data import CancerDataset, get_transforms
-from mlops_project.dataloader import create_dataloaders, set_seed
+from mlops_project.dataloader import create_dataloaders, set_seed, subsample_dataloader
 from mlops_project.model import BaselineCNN, EfficientNet, ResNet
 from mlops_project.subsample import subsample_dataset
 
@@ -29,6 +25,7 @@ def train_model(
     patience: int = 7,
     output_dir: str = "outputs/models",
 ) -> tuple[pl.LightningModule, dict]:
+    """Train a given model and return the trained model and training metrics."""
     # Troubleshooting purposes - training slower on cpu
     print(f"CUDA available: {torch.cuda.is_available()}")
     print(f"Device: {torch.device('cuda' if torch.cuda.is_available() else 'cpu')}")
@@ -72,46 +69,6 @@ def train_model(
     return model, metrics
 
 
-# #Evaluate and compare training results
-# def evaluate(
-#     model: pl.LightningModule,
-#     test_loader,
-#     model_name: str
-# )->dict:
-#     """Evaluate a trained model on the test set and return metrics."""
-#     print(f"\nEvaluating {model_name} on test set...")
-
-#     #train
-#     trainer = pl.Trainer(
-#         accelerator="auto",
-#         devices=1,
-#         logger=False
-#         )
-
-#     #predict
-#     predictions = trainer.predict(model, test_loader)
-
-#     #retrieve label predictions
-#     all_preds = torch.cat(predictions)
-#     all_labels = []
-#     for batch in test_loader:
-#         _, labels = batch
-#         all_labels.append(labels)
-#     all_labels = torch.cat(all_labels)
-
-#     #Calculate accuracy
-#     accuracy = (all_preds == all_labels).float().mean().item()
-
-#     metrics = {
-#         "model_name": model_name,
-#         "test_accuracy": accuracy,
-#     }
-
-#     print(f"\tTest Accuracy: {accuracy:.4f}")
-
-#     return metrics
-
-
 # Creation of CLI interaction with train.py (vibecoded)
 @app.command()
 def train(
@@ -127,11 +84,12 @@ def train(
     learning_rate: float = typer.Option(1e-3, help="Learning rate"),
     num_classes: int = typer.Option(7, help="Number of classes (7 for HAM10000)"),
     random_seed: int = typer.Option(42, help="Random seed for reproducibility"),
-    #model-specific config options
+    # model-specific config options
     efficientnet_size: str = typer.Option("b0", help="EfficientNet model size (b0-b7)"),
     pretrained: bool = typer.Option(True, help="Use pretrained weights (for ResNet/EfficientNet)"),
     freeze_backbone: bool = typer.Option(False, help="Freeze backbone layers (for ResNet/EfficientNet)"),
 ) -> None:
+    """Train specified model on skin lesion dataset with optional subsampling."""
     set_seed(random_seed)
 
     print("=" * 80)
@@ -184,12 +142,7 @@ def train(
             lr=learning_rate,
         )
     elif model_name == "ResNet":
-        model = ResNet(
-            num_classes=num_classes,
-            lr=learning_rate,
-            pretrained=pretrained,
-            freeze_backbone=freeze_backbone,
-        )
+        model = ResNet(num_classes=num_classes, lr=learning_rate)
     elif model_name == "EfficientNet":
         model = EfficientNet(
             num_classes=num_classes,
@@ -228,7 +181,7 @@ def train(
     print("\n[4/5] Evaluating models on test set...")
     try:
         evaluation_results = evaluate(model=trained_model, test_loader=test_loader, model_name=model_name)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"  ERROR: Failed to evaluate {model_name}: {str(e)}")
         return
 
@@ -247,9 +200,9 @@ def train(
     results_path = Path(output_dir) / "training_results.json"
     results = {
         "model": model_name,
-        "test_accuracy": evaluation_results['test_accuracy'],
-        "val_loss": training_metrics['best_val_loss'],
-        "checkpoint_path": training_metrics['checkpoint_path'],
+        "test_accuracy": evaluation_results["test_accuracy"],
+        "val_loss": training_metrics["best_val_loss"],
+        "checkpoint_path": training_metrics["checkpoint_path"],
         "configuration": {
             "data_path": data_path,
             "subsample_percentage": subsample_percentage,
@@ -287,5 +240,4 @@ if __name__ == "__main__":
     #
     # *BEST FOR QUICK TESTING* (1% data, 5 epochs):
     # python train.py --model-name BaselineCNN --subsample-percentage 0.01 --max-epochs 5 --batch-size 16
-
     app()

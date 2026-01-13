@@ -6,7 +6,7 @@ import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 
-from data import CancerDataset, get_transforms
+from mlops_project.data import CancerDataset, get_transforms
 
 
 def set_seed(seed: int = 42) -> None:
