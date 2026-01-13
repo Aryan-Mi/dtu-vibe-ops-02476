@@ -5,15 +5,15 @@ import pandas as pd
 import pytorch_lightning as pl
 import torch
 import typer
-from dataloader import create_dataloaders, set_seed, subsample_dataloader
-from model import BaselineCNN, EfficientNet, ResNet
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import CSVLogger
 from sklearn.model_selection import train_test_split
-from subsample import subsample_dataset
 from torch.utils.data import DataLoader
 
-from data import CancerDataset, get_transforms
+from mlops_project.data import CancerDataset, get_transforms
+from mlops_project.dataloader import create_dataloaders, set_seed
+from mlops_project.model import BaselineCNN, EfficientNet, ResNet
+from mlops_project.subsample import subsample_dataset
 
 app = typer.Typer()
 
