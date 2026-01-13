@@ -51,9 +51,9 @@ def split_dataset_indices(
     set_seed(random_seed)
 
     # Validate ratios
-    assert (
-        abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6
-    ), f"Ratios must sum to 1.0, got {train_ratio + val_ratio + test_ratio}"
+    assert abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6, (
+        f"Ratios must sum to 1.0, got {train_ratio + val_ratio + test_ratio}"
+    )
 
     # Load metadata
     metadata = pd.read_csv(metadata_path)

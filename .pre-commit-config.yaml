@@ -2,7 +2,7 @@
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -17,8 +17,11 @@ repos:
       - id: mixed-line-ending
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.4
+    rev: v0.14.11
     hooks:
+      # 1) Apply Ruff autofixes first (imports, small refactors, etc.)
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
+        args: [--fix]
+
+      # 2) Then apply Ruff's formatter last (source of truth for formatting)
       - id: ruff-format
