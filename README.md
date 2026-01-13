@@ -31,11 +31,11 @@ Key data steps:
 
 ## Model plan (architecture brainstorm)
 We will implement 3 tiers:
-1. **Baseline CNN (from scratch)**  
+1. **Baseline CNN (from scratch)**
    Repeated blocks: Conv(3×3) → BatchNorm → ReLU → MaxPool(2), then a classifier head.
-2. **Residual CNN (ResNet-style)**  
+2. **Residual CNN (ResNet-style)**
    Residual blocks: Conv(3×3) → BN → ReLU → Conv(3×3) → BN, skip connection + ReLU, then global average pooling + FC.
-3. **Transfer learning (expected best performance)**  
+3. **Transfer learning (expected best performance)**
    EfficientNet-family and/or modern backbones (e.g., ConvNeXt / ViT equivalents) initialized from pretrained weights, then fine-tuned on HAM10000.
 
 ## MLOps plan (course-aligned)

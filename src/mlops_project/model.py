@@ -128,7 +128,7 @@ class BaselineCNN(pl.LightningModule):
         """Prediction step for the BaselineCNN model."""
         # batch is (images, labels) from the DataLoader
         # We only need the images for prediction
-        x = batch[0] if isinstance(batch, (list, tuple)) else batch
+        x = batch[0] if isinstance(batch, list | tuple) else batch
 
         # return self(x)  # returns logits
 
@@ -269,7 +269,7 @@ class ResNet(pl.LightningModule):
         # batch is (images, labels) from the DataLoader
         # We only need the images for prediction
 
-        x = batch[0] if isinstance(batch, (list, tuple)) else batch
+        x = batch[0] if isinstance(batch, list | tuple) else batch
 
         # return self(x)  # returns logits
 
@@ -382,7 +382,7 @@ class EfficientNet(pl.LightningModule):
         """Prediction step for the ResNet model."""
         # batch is (images, labels) from the DataLoader
         # We only need the images for prediction
-        x = batch[0] if isinstance(batch, (list, tuple)) else batch
+        x = batch[0] if isinstance(batch, list | tuple) else batch
 
         # return self(x)  # returns logits
 
