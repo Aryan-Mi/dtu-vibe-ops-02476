@@ -8,6 +8,7 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import CSVLogger
 
 from mlops_project.dataloader import create_dataloaders, set_seed, subsample_dataloader
+from mlops_project.evaluate import evaluate
 from mlops_project.model import BaselineCNN, EfficientNet, ResNet
 from mlops_project.subsample import subsample_dataset
 
@@ -173,14 +174,18 @@ def train(
             epochs=max_epochs,
             output_dir=output_dir,
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"  ERROR: Failed to train {model_name}: {str(e)}")
         return
 
     # Step 4: Evaluate all models on test set
     print("\n[4/5] Evaluating models on test set...")
     try:
-        evaluation_results = evaluate(model=trained_model, test_loader=test_loader, model_name=model_name)
+        evaluation_results = evaluate(
+            model_name=model_name,
+            model=trained_model,
+            test_loader=test_loader,
+        )
     except Exception as e:  # noqa: BLE001
         print(f"  ERROR: Failed to evaluate {model_name}: {str(e)}")
         return
