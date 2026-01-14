@@ -184,20 +184,3 @@ outputs/
 
 # WandB
 wandb/
-
-# HPC error and outputs
-gpu_*.err
-gpu_*.out
-
-logs/
-outputs/
-
-# WandB
-wandb/
-
-# HPC error and outputs
-gpu_*.err
-gpu_*.out
-
-logs/
-outputs/
