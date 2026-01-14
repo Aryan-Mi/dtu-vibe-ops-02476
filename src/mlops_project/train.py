@@ -1,16 +1,21 @@
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import hydra
 import pytorch_lightning as pl
 import torch
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-from pytorch_lightning.loggers import CSVLogger
+from pytorch_lightning.loggers import CSVLogger, WandbLogger
 
+import wandb
 from mlops_project.dataloader import create_dataloaders, set_seed, subsample_dataloader
 from mlops_project.model import BaselineCNN, EfficientNet, ResNet
 from mlops_project.subsample import subsample_dataset
+
+if TYPE_CHECKING:
+    from pytorch_lightning.loggers.logger import Logger
 
 
 # Train models written in model.py and store results for comparison and selection of best model.
@@ -23,6 +28,7 @@ def train_model(
     epochs: int = 10,
     patience: int = 7,
     output_dir: str = "outputs/models",
+    wandb_logger: WandbLogger | None = None,
 ) -> tuple[pl.LightningModule, dict]:
     """Train a given model and return the trained model and training metrics."""
     # Troubleshooting purposes - training slower on cpu
@@ -47,12 +53,17 @@ def train_model(
         save_last=True,
     )
 
+    # Set up loggers
+    loggers: list[Logger] = [CSVLogger(save_dir="logs/")]
+    if wandb_logger is not None:
+        loggers.append(wandb_logger)
+
     # train model
     trainer = pl.Trainer(
         max_epochs=epochs,
         accelerator="auto",
         devices="auto",
-        logger=CSVLogger(save_dir="logs/"),
+        logger=loggers,
         callbacks=[early_stopping, checkpoint_callback],
     )
 
@@ -119,7 +130,7 @@ def create_model(cfg: DictConfig) -> pl.LightningModule:
 
 @hydra.main(version_base=None, config_path="../../configs", config_name="config")
 def train(cfg: DictConfig) -> None:
-    """Train specified model on skin lesion dataset with Hydra configuration.
+    """Train specified model on skin lesion dataset with Hydra configuration and W&B logging.
 
     Args:
         cfg: Hydra configuration object
@@ -142,7 +153,7 @@ def train(cfg: DictConfig) -> None:
 
     # Step 1: Load data (with optional subsampling)
     if subsample_percentage is not None:
-        print(f"\n[1/4] Subsampling dataset ({subsample_percentage * 100:.1f}%)...")
+        print(f"\n[1/5] Subsampling dataset ({subsample_percentage * 100:.1f}%)...")
         metadata_path = Path(data_path) / "metadata" / "HAM10000_metadata.csv"
 
         subsample_result = subsample_dataset(
@@ -167,7 +178,7 @@ def train(cfg: DictConfig) -> None:
             random_seed=cfg.seed,
         )
     else:
-        print("\n[1/4] Loading full dataset...")
+        print("\n[1/5] Loading full dataset...")
         train_loader, val_loader, test_loader = create_dataloaders(
             data_path=data_path,
             image_size=cfg.data.image_size,
@@ -177,7 +188,7 @@ def train(cfg: DictConfig) -> None:
         )
 
     # Step 2: Define model to train
-    print(f"\n[2/4] Initializing {model_name}...")
+    print(f"\n[2/5] Initializing {model_name}...")
     model = create_model(cfg)
 
     print(f"  Model: {model_name}")
@@ -189,8 +200,28 @@ def train(cfg: DictConfig) -> None:
         print(f"    Pretrained: {cfg.model.pretrained}")
         print(f"    Freeze backbone: {cfg.model.freeze_backbone}")
 
-    # Step 3: Train the model
-    print("\n[3/4] Training model...")
+    # Step 3: Initialize W&B logger (if enabled)
+    wandb_logger = None
+    use_wandb = cfg.get("wandb", {}).get("enabled", False)
+
+    if use_wandb:
+        print("\n[3/5] Initializing W&B logging...")
+        wandb_cfg = cfg.wandb
+        wandb_config = OmegaConf.to_container(cfg, resolve=True)
+
+        run_name = wandb_cfg.get("run_name") or f"{model_name}-{subsample_percentage or 'full'}"
+        wandb_logger = WandbLogger(
+            project=wandb_cfg.get("project", "skin-lesion-classification"),
+            name=run_name,
+            config=wandb_config,
+            log_model=wandb_cfg.get("log_model", True),
+        )
+        print(f"  W&B logging enabled: {wandb_cfg.get('project')}/{run_name}")
+    else:
+        print("\n[3/5] W&B logging disabled")
+
+    # Step 4: Train the model
+    print("\n[4/5] Training model...")
     try:
         _, training_metrics = train_model(
             model=model,
@@ -200,13 +231,16 @@ def train(cfg: DictConfig) -> None:
             epochs=cfg.training.max_epochs,
             patience=cfg.training.patience,
             output_dir=output_dir,
+            wandb_logger=wandb_logger,
         )
     except Exception as e:  # noqa: BLE001
         print(f"  ERROR: Failed to train {model_name}: {str(e)}")
+        if use_wandb:
+            wandb.finish()
         return
 
-    # Step 4: Save results
-    print("\n[4/4] Saving results...")
+    # Step 5: Save results
+    print("\n[5/5] Saving results...")
 
     print("\n" + "=" * 80)
     print("TRAINING SUMMARY")
@@ -229,6 +263,11 @@ def train(cfg: DictConfig) -> None:
 
     print(f"\nResults saved to: {results_path}")
     print(f"Model checkpoint: {training_metrics['checkpoint_path']}")
+
+    # Finish W&B run
+    if use_wandb:
+        wandb.finish()
+        print("\nW&B run finished. View results at: https://wandb.ai")
 
 
 if __name__ == "__main__":
@@ -257,4 +296,13 @@ if __name__ == "__main__":
     #
     # EfficientNet with different model size:
     #   uv run src/mlops_project/train.py model=efficientnet model.model_size=b3 data.image_size=300
+    #
+    # Enable W&B logging:
+    #   uv run src/mlops_project/train.py wandb.enabled=true
+    #
+    # W&B with custom project and run name:
+    #   uv run src/mlops_project/train.py wandb.enabled=true wandb.project=my-project wandb.run_name=experiment-1
+    #
+    # Full example with W&B:
+    #   uv run src/mlops_project/train.py model=efficientnet data.subsample_percentage=0.1 wandb.enabled=true
     train()

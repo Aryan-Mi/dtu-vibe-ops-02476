@@ -1,0 +1,26 @@
+{
+  "os":  "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.31",
+  "python":  "CPython 3.12.11",
+  "startedAt":  "2026-01-11T13:06:28.503630Z",
+  "program":  "<python with no main file>",
+  "git":  {
+    "remote":  "https://github.com/Aryan-Mi/dtu-vibe-ops-02476.git",
+    "commit":  "2ba190e25585f506cb3903a7d53bb15ab5342a62"
+  },
+  "email":  "marwansummakieh97@gmail.com",
+  "root":  "/workspaces/dtu-vibe-ops-02476",
+  "host":  "de21f7ae7f5d",
+  "executable":  "/workspaces/dtu-vibe-ops-02476/.venv/bin/python3",
+  "cpu_count":  4,
+  "cpu_count_logical":  8,
+  "disk":  {
+    "/":  {
+      "total":  "1081101176832",
+      "used":  "18404130816"
+    }
+  },
+  "memory":  {
+    "total":  "8218951680"
+  },
+  "writerId":  "42vssbmv3xsp2cm45nnwrklg4m01k4v9"
+}
