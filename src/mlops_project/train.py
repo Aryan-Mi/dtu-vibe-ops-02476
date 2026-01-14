@@ -61,7 +61,9 @@ def train_model(
 
     metrics = {
         "model_name": model_name,
-        "best_val_loss": float(checkpoint_callback.best_model_score),
+        "best_val_loss": checkpoint_callback.best_model_score.item()
+        if checkpoint_callback.best_model_score is not None
+        else None,
         "checkpoint_path": str(checkpoint_callback.best_model_path),
     }
 
