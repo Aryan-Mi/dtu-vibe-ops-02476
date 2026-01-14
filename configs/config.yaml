@@ -1,55 +1,30 @@
 # Hydra Defaults - Specifies which config files to load from config groups
 defaults:
-  - models: efficientnet     # loads configs/models/efficientnet.yaml
-  - optimizers: adam         # loads configs/optimizers/adam.yaml
+  - model: baseline_cnn      # loads configs/model/baseline_cnn.yaml
   - _self_                   # keeps overrides from this file
 
 # Training Configuration
 training:
-  max_epochs: 50
-  batch_size: 32
-  num_workers: 4
-  accelerator: "auto"  # auto, gpu, cpu, mps
-  devices: 1
-  precision: 32  # 16, 32, or "bf16"
-  # NOTE: Uncomment/adjust the following parameters when needed
-  # gradient_clip_val: 1.0
-  # accumulate_grad_batches: 1
-  # log_every_n_steps: 10
-
-# Paths
-paths:
-  data_dir: "data"
-  raw_data_dir: "data/raw"
-  processed_data_dir: "data/processed"
-  model_dir: "models"
-  output_dir: "outputs"
-  log_dir: "logs"
+  max_epochs: 20
+  patience: 7                # Early stopping patience
+  accelerator: "auto"        # auto, gpu, cpu, mps
+  devices: "auto"
 
 # Data Configuration
 data:
-  num_classes: 2
-  input_channel: 3
-  # Data split configuration:
-  # - 70% for train+val, 30% for test
-  # - Of the 70% train+val: 75% train (52.5% of total), 25% val (17.5% of total)
-  test_split: 0.3           # 30% reserved for final testing
-  train_val_split: 0.75     # 75% of remaining data for training, 25% for validation
-  seed: 42
-  # TODO: Add augmentation parameters when needed
-  # augmentation:
+  data_path: "data/raw/ham10000"
+  num_classes: 7             # HAM10000 has 7 classes
+  image_size: 224
+  batch_size: 32
+  num_workers: 4
+  # Subsampling (optional) - set to null to use full dataset
+  subsample_percentage: null  # e.g., 0.1 for 10% of data
+  subsample_seed: 42
 
+# Paths
+paths:
+  output_dir: "outputs/models"
+  log_dir: "logs"
 
-# Potential Additional Configurations for Future Use
-# --------------------------------------------------
-# Learning Rate Scheduler Configuration
-# scheduler:
-
-# Early Stopping Configuration
-# early_stopping:
-
-# Checkpoint Configuration
-# checkpoint:
-
-# Logging Configuration
-# logging: TODO: Add when needed
+# Reproducibility
+seed: 42

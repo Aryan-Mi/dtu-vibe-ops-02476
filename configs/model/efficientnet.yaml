@@ -1,0 +1,14 @@
+# EfficientNet Configuration
+name: "EfficientNet"
+
+# Model parameters (match EfficientNet.__init__ signature)
+num_classes: ${data.num_classes}  # Interpolated from main config
+model_size: "b0"                  # Options: b0, b1, b2, b3, b4, b5, b6, b7
+lr: 0.0001                        # Lower learning rate for pretrained models
+use_bn: true
+pretrained: true
+freeze_backbone: false
+
+# Note: Input sizes for each model variant (handled automatically by model)
+# b0: 224, b1: 240, b2: 260, b3: 300, b4: 380, b5: 456, b6: 528, b7: 600
+# When using EfficientNet, set data.image_size to match the model_size
