@@ -3,7 +3,7 @@
 ### –- specify queue --
 #BSUB -q gpuv100
 ### -- set the job Name --
-#BSUB -J mlops_job_32gb_baselineCNN_epochs:20
+#BSUB -J mlops_job_32gb
 ### -- ask for number of cores (default: 1) --
 #BSUB -n 4
 ### -- Select the resources: 1 gpu in exclusive process mode --
@@ -30,4 +30,7 @@
 source /zhome/82/3/191611/MLOps/dtu-vibe-ops-02476/.venv/bin/activate
 cd /zhome/82/3/191611/MLOps/dtu-vibe-ops-02476
 
-python ./src/mlops_project/train.py --model-name BaselineCNN --data-path ./data/raw/ham10000 --max-epochs 20
+# python ./src/mlops_project/train.py --model-name BaselineCNN --data-path ./data/raw/ham10000 --max-epochs 20
+uv run src/mlops_project/train.py # Baseline CNN
+uv run src/mlops_project/train.py model=efficientnet
+uv run src/mlops_project/train.py model=resnet
