@@ -233,26 +233,26 @@ if __name__ == "__main__":
     # Hydra Usage Examples:
     #
     # Train with default config (BaselineCNN):
-    #   python -m mlops_project.train
+    #   uv run src/mlops_project/train.py
     #
     # Train ResNet (override model config group):
-    #   python -m mlops_project.train model=resnet
+    #   uv run src/mlops_project/train.py model=resnet
     #
     # Train EfficientNet:
-    #   python -m mlops_project.train model=efficientnet
+    #   uv run src/mlops_project/train.py model=efficientnet
     #
     # Override specific parameters:
-    #   python -m mlops_project.train model=resnet training.max_epochs=10 data.batch_size=16
+    #   uv run src/mlops_project/train.py model=resnet training.max_epochs=10 data.batch_size=16
     #
     # Use subsampling (10% of data):
-    #   python -m mlops_project.train data.subsample_percentage=0.1
+    #   uv run src/mlops_project/train.py data.subsample_percentage=0.1
     #
     # Quick test (1% data, 5 epochs):
-    #   python -m mlops_project.train data.subsample_percentage=0.01 training.max_epochs=5
+    #   uv run src/mlops_project/train.py data.subsample_percentage=0.01 training.max_epochs=5
     #
     # Change learning rate:
-    #   python -m mlops_project.train model=efficientnet model.lr=0.0001
+    #   uv run src/mlops_project/train.py model=efficientnet model.lr=0.0001
     #
     # EfficientNet with different model size:
-    #   python -m mlops_project.train model=efficientnet model.model_size=b3 data.image_size=300
+    #   uv run src/mlops_project/train.py model=efficientnet model.model_size=b3 data.image_size=300
     train()
