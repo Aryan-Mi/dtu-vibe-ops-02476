@@ -21,6 +21,12 @@ data:
   subsample_percentage: null  # e.g., 0.1 for 10% of data
   subsample_seed: 42
 
+wandb:
+  enabled: true
+  project: "skin-lesion-classification"
+  run_name: null  # auto-generated if not set
+  log_model: true
+
 # Paths
 paths:
   output_dir: "outputs/models"
