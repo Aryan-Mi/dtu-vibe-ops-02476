@@ -1,0 +1,63 @@
+name: Build Docker Images
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dockerfiles/**'
+      - 'src/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'dockerfiles/**'
+      - 'src/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  build-train:
+    name: Build Train Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build train image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: dockerfiles/train.dockerfile
+          push: false  # Only build, don't push
+          tags: train:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-inference:
+    name: Build Inference Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build inference image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: dockerfiles/inference.dockerfile
+          push: false  # Only build, don't push
+          tags: inference:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -15,9 +15,9 @@ COPY src src/
 WORKDIR /
 RUN uv sync --frozen
 
-# 4. Set entrypoint to training script
+# 4. Set entrypoint to evaluation script
 ENTRYPOINT ["uv", "run", "src/mlops_project/evaluate.py"]
 
-# Docker commands to build and run the training container:
-# docker build -f dockerfiles/evaluate.dockerfile -t evaluate:latest .
-# docker run --name experimentName -v ${PWD}/models:/models/ -v ${PWD}/data/raw:/data/raw -v ${PWD}/data/processed:/data/processed evaluate:latest
+# Docker commands to build and run the inference container:
+# docker build -f dockerfiles/inference.dockerfile -t inference:latest .
+# docker run --name experimentName -v ${PWD}/models:/models/ -v ${PWD}/data/raw:/data/raw -v ${PWD}/data/processed:/data/processed inference:latest

@@ -3,7 +3,7 @@
 ### –- specify queue --
 #BSUB -q gpuv100
 ### -- set the job Name --
-#BSUB -J mlops_job_32gb_baselineCNN_epochs:20 
+#BSUB -J mlops_job_32gb_baselineCNN_epochs:20
 ### -- ask for number of cores (default: 1) --
 #BSUB -n 4
 ### -- Select the resources: 1 gpu in exclusive process mode --
