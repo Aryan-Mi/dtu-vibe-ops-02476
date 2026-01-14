@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import hydra
 import pytorch_lightning as pl
@@ -12,6 +13,9 @@ import wandb
 from mlops_project.dataloader import create_dataloaders, set_seed, subsample_dataloader
 from mlops_project.model import BaselineCNN, EfficientNet, ResNet
 from mlops_project.subsample import subsample_dataset
+
+if TYPE_CHECKING:
+    from pytorch_lightning.loggers.logger import Logger
 
 
 # Train models written in model.py and store results for comparison and selection of best model.
@@ -50,7 +54,7 @@ def train_model(
     )
 
     # Set up loggers
-    loggers = [CSVLogger(save_dir="logs/")]
+    loggers: list[Logger] = [CSVLogger(save_dir="logs/")]
     if wandb_logger is not None:
         loggers.append(wandb_logger)
 
@@ -77,102 +81,61 @@ def train_model(
     return model, metrics
 
 
-def _get_dataloaders(
-    data_path: str,
-    subsample_percentage: float | None,
-    subsample_seed: int,
-    image_size: int,
-    batch_size: int,
-    num_workers: int,
-    random_seed: int,
-):
-    if subsample_percentage is not None:
-        print(f"\n[1/5] Subsampling dataset ({subsample_percentage * 100:.1f}%)...")
-        metadata_path = Path(data_path) / "metadata" / "HAM10000_metadata.csv"
+def create_model(cfg: DictConfig) -> pl.LightningModule:
+    """Create a model based on the configuration.
 
-        subsample_result = subsample_dataset(
-            metadata_path=metadata_path,
-            percentage=subsample_percentage,
-            random_seed=subsample_seed,
-        )
+    Args:
+        cfg: Hydra configuration containing model parameters
 
-        # Print subsample statistics
-        total_subsampled = sum(len(images) for images in subsample_result.values())
-        print(f"  Subsampled {total_subsampled} images")
-        for dx_category, images in subsample_result.items():
-            print(f"    {dx_category}: {len(images)} images")
+    Returns:
+        Instantiated PyTorch Lightning model
+    """
+    model_name = cfg.model.name
+    model_cfg = cfg.model
 
-        # Create dataloaders from subsampled data
-        return subsample_dataloader(
-            data_path=data_path,
-            subsample_result=subsample_result,
-            image_size=image_size,
-            batch_size=batch_size,
-            num_workers=num_workers,
-            random_seed=random_seed,
-        )
-
-    print("\n[1/4] Loading full dataset...")
-    return create_dataloaders(
-        data_path=data_path,
-        image_size=image_size,
-        batch_size=batch_size,
-        num_workers=num_workers,
-        random_seed=random_seed,
-    )
-
-
-def _initialize_model(
-    model_name: str,
-    num_classes: int,
-    learning_rate: float,
-    efficientnet_size: str,
-    pretrained: bool,
-    freeze_backbone: bool,
-) -> pl.LightningModule | None:
     if model_name == "BaselineCNN":
         return BaselineCNN(
-            num_classes=num_classes,
-            lr=learning_rate,
+            num_classes=model_cfg.num_classes,
+            input_dim=model_cfg.input_dim,
+            input_channel=model_cfg.input_channel,
+            output_channels=list(model_cfg.output_channels),
+            lr=model_cfg.lr,
+            use_bn=model_cfg.use_bn,
         )
     if model_name == "ResNet":
-        return ResNet(num_classes=num_classes, lr=learning_rate)
+        return ResNet(
+            num_classes=model_cfg.num_classes,
+            input_channel=model_cfg.input_channel,
+            input_dim=model_cfg.input_dim,
+            base_channel=model_cfg.base_channel,
+            output_channels=list(model_cfg.output_channels),
+            strides=list(model_cfg.strides),
+            dropout=model_cfg.dropout,
+            lr=model_cfg.lr,
+            use_bn=model_cfg.use_bn,
+        )
     if model_name == "EfficientNet":
         return EfficientNet(
-            num_classes=num_classes,
-            model_size=efficientnet_size,
-            lr=learning_rate,
-            pretrained=pretrained,
-            freeze_backbone=freeze_backbone,
+            num_classes=model_cfg.num_classes,
+            model_size=model_cfg.model_size,
+            lr=model_cfg.lr,
+            use_bn=model_cfg.use_bn,
+            pretrained=model_cfg.pretrained,
+            freeze_backbone=model_cfg.freeze_backbone,
         )
 
-    print(f"  ERROR: Unknown model '{model_name}'. Choose from: BaselineCNN, ResNet, EfficientNet")
-    return None
+    msg = f"Unknown model '{model_name}'. Choose from: BaselineCNN, ResNet, EfficientNet"
+    raise ValueError(msg)
 
 
-# Creation of CLI interaction with train.py (vibecoded)
-@app.command()
-def train(
-    model_name: str = typer.Option(..., help="Model to train:BaselineCNN, ResNet, or EfficientNet"),
-    data_path: str = typer.Option("data/raw/ham10000", help="Path to the data folder"),
-    output_dir: str = typer.Option("outputs/models", help="Directory to save trained models"),
-    subsample_percentage: float | None = typer.Option(None, help="Percentage of data to subsample (0.0-1.0)"),
-    subsample_seed: int = typer.Option(42, help="Random seed for subsampling"),
-    image_size: int = typer.Option(224, help="Image size for training"),
-    batch_size: int = typer.Option(32, help="Batch size"),
-    num_workers: int = typer.Option(4, help="Number of data loading workers"),
-    max_epochs: int = typer.Option(20, help="Maximum number of training epochs"),
-    learning_rate: float = typer.Option(1e-3, help="Learning rate"),
-    num_classes: int = typer.Option(7, help="Number of classes (7 for HAM10000)"),
-    random_seed: int = typer.Option(42, help="Random seed for reproducibility"),
-    # model-specific config options
-    efficientnet_size: str = typer.Option("b0", help="EfficientNet model size (b0-b7)"),
-    pretrained: bool = typer.Option(True, help="Use pretrained weights (for ResNet/EfficientNet)"),
-    freeze_backbone: bool = typer.Option(False, help="Freeze backbone layers (for ResNet/EfficientNet)"),
-) -> None:
-    """Train specified model on skin lesion dataset with optional subsampling."""
-    set_seed(random_seed)
+@hydra.main(version_base=None, config_path="../../configs", config_name="config")
+def train(cfg: DictConfig) -> None:
+    """Train specified model on skin lesion dataset with Hydra configuration and W&B logging.
 
+    Args:
+        cfg: Hydra configuration object
+    """
+    # Print resolved configuration
     print("=" * 80)
     print("SKIN LESION CLASSIFICATION - MODEL TRAINING")
     print("=" * 80)
@@ -196,7 +159,7 @@ def train(
         subsample_result = subsample_dataset(
             metadata_path=metadata_path,
             percentage=subsample_percentage,
-            random_seed=subsample_seed,
+            random_seed=cfg.data.subsample_seed,
         )
 
         # Print subsample statistics
@@ -209,43 +172,24 @@ def train(
         train_loader, val_loader, test_loader = subsample_dataloader(
             data_path=data_path,
             subsample_result=subsample_result,
-            image_size=image_size,
-            batch_size=batch_size,
-            num_workers=num_workers,
-            random_seed=random_seed,
+            image_size=cfg.data.image_size,
+            batch_size=cfg.data.batch_size,
+            num_workers=cfg.data.num_workers,
+            random_seed=cfg.seed,
         )
     else:
-        print("\n[1/4] Loading full dataset...")
+        print("\n[1/5] Loading full dataset...")
         train_loader, val_loader, test_loader = create_dataloaders(
             data_path=data_path,
-            image_size=image_size,
-            batch_size=batch_size,
-            num_workers=num_workers,
-            random_seed=random_seed,
+            image_size=cfg.data.image_size,
+            batch_size=cfg.data.batch_size,
+            num_workers=cfg.data.num_workers,
+            random_seed=cfg.seed,
         )
 
     # Step 2: Define model to train
-    print(f"\n[2/4] Initializing {model_name}...")
-
-    # Validate and create the specified model
-    if model_name == "BaselineCNN":
-        model = BaselineCNN(
-            num_classes=num_classes,
-            lr=learning_rate,
-        )
-    elif model_name == "ResNet":
-        model = ResNet(num_classes=num_classes, lr=learning_rate)
-    elif model_name == "EfficientNet":
-        model = EfficientNet(
-            num_classes=num_classes,
-            model_size=efficientnet_size,
-            lr=learning_rate,
-            pretrained=pretrained,
-            freeze_backbone=freeze_backbone,
-        )
-    else:
-        print(f"  ERROR: Unknown model '{model_name}'. Choose from: BaselineCNN, ResNet, EfficientNet")
-        return
+    print(f"\n[2/5] Initializing {model_name}...")
+    model = create_model(cfg)
 
     print(f"  Model: {model_name}")
     if model_name == "ResNet":
@@ -256,8 +200,28 @@ def train(
         print(f"    Pretrained: {cfg.model.pretrained}")
         print(f"    Freeze backbone: {cfg.model.freeze_backbone}")
 
-    # Step 3: Train all models
-    print("\n[3/4] Training models...")
+    # Step 3: Initialize W&B logger (if enabled)
+    wandb_logger = None
+    use_wandb = cfg.get("wandb", {}).get("enabled", False)
+
+    if use_wandb:
+        print("\n[3/5] Initializing W&B logging...")
+        wandb_cfg = cfg.wandb
+        wandb_config = OmegaConf.to_container(cfg, resolve=True)
+
+        run_name = wandb_cfg.get("run_name") or f"{model_name}-{subsample_percentage or 'full'}"
+        wandb_logger = WandbLogger(
+            project=wandb_cfg.get("project", "skin-lesion-classification"),
+            name=run_name,
+            config=wandb_config,
+            log_model=wandb_cfg.get("log_model", True),
+        )
+        print(f"  W&B logging enabled: {wandb_cfg.get('project')}/{run_name}")
+    else:
+        print("\n[3/5] W&B logging disabled")
+
+    # Step 4: Train the model
+    print("\n[4/5] Training model...")
     try:
         _, training_metrics = train_model(
             model=model,
@@ -271,10 +235,12 @@ def train(
         )
     except Exception as e:  # noqa: BLE001
         print(f"  ERROR: Failed to train {model_name}: {str(e)}")
+        if use_wandb:
+            wandb.finish()
         return
 
-    # Step 4: Save results
-    print("\n[4/4] Saving results...")
+    # Step 5: Save results
+    print("\n[5/5] Saving results...")
 
     print("\n" + "=" * 80)
     print("TRAINING SUMMARY")
@@ -330,4 +296,13 @@ if __name__ == "__main__":
     #
     # EfficientNet with different model size:
     #   uv run src/mlops_project/train.py model=efficientnet model.model_size=b3 data.image_size=300
+    #
+    # Enable W&B logging:
+    #   uv run src/mlops_project/train.py wandb.enabled=true
+    #
+    # W&B with custom project and run name:
+    #   uv run src/mlops_project/train.py wandb.enabled=true wandb.project=my-project wandb.run_name=experiment-1
+    #
+    # Full example with W&B:
+    #   uv run src/mlops_project/train.py model=efficientnet data.subsample_percentage=0.1 wandb.enabled=true
     train()
