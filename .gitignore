@@ -181,3 +181,6 @@ gpu_*.out
 
 logs/
 outputs/
+
+# WandB
+wandb/
