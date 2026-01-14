@@ -1,9 +1,10 @@
 import json
 from pathlib import Path
 
+import hydra
 import pytorch_lightning as pl
 import torch
-import typer
+from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import CSVLogger, WandbLogger
 
@@ -11,8 +12,6 @@ import wandb
 from mlops_project.dataloader import create_dataloaders, set_seed, subsample_dataloader
 from mlops_project.model import BaselineCNN, EfficientNet, ResNet
 from mlops_project.subsample import subsample_dataset
-
-app = typer.Typer()
 
 
 # Train models written in model.py and store results for comparison and selection of best model.
@@ -69,7 +68,9 @@ def train_model(
 
     metrics = {
         "model_name": model_name,
-        "best_val_loss": float(checkpoint_callback.best_model_score),
+        "best_val_loss": checkpoint_callback.best_model_score.item()
+        if checkpoint_callback.best_model_score is not None
+        else None,
         "checkpoint_path": str(checkpoint_callback.best_model_path),
     }
 
@@ -168,10 +169,6 @@ def train(
     efficientnet_size: str = typer.Option("b0", help="EfficientNet model size (b0-b7)"),
     pretrained: bool = typer.Option(True, help="Use pretrained weights (for ResNet/EfficientNet)"),
     freeze_backbone: bool = typer.Option(False, help="Freeze backbone layers (for ResNet/EfficientNet)"),
-    # wandb options
-    use_wandb: bool = typer.Option(True, help="Enable Weights & Biases logging"),
-    wandb_project: str = typer.Option("skin-lesion-classification", help="W&B project name"),
-    wandb_run_name: str | None = typer.Option(None, help="W&B run name (auto-generated if not provided)"),
 ) -> None:
     """Train specified model on skin lesion dataset with optional subsampling."""
     set_seed(random_seed)
@@ -179,65 +176,85 @@ def train(
     print("=" * 80)
     print("SKIN LESION CLASSIFICATION - MODEL TRAINING")
     print("=" * 80)
+    print("\nResolved Configuration:")
+    print(OmegaConf.to_yaml(cfg))
+    print("=" * 80)
+
+    # Set random seed for reproducibility
+    set_seed(cfg.seed)
+
+    model_name = cfg.model.name
+    data_path = cfg.data.data_path
+    output_dir = cfg.paths.output_dir
+    subsample_percentage = cfg.data.subsample_percentage
 
     # Step 1: Load data (with optional subsampling)
-    train_loader, val_loader, test_loader = _get_dataloaders(
-        data_path=data_path,
-        subsample_percentage=subsample_percentage,
-        subsample_seed=subsample_seed,
-        image_size=image_size,
-        batch_size=batch_size,
-        num_workers=num_workers,
-        random_seed=random_seed,
-    )
+    if subsample_percentage is not None:
+        print(f"\n[1/5] Subsampling dataset ({subsample_percentage * 100:.1f}%)...")
+        metadata_path = Path(data_path) / "metadata" / "HAM10000_metadata.csv"
+
+        subsample_result = subsample_dataset(
+            metadata_path=metadata_path,
+            percentage=subsample_percentage,
+            random_seed=subsample_seed,
+        )
+
+        # Print subsample statistics
+        total_subsampled = sum(len(images) for images in subsample_result.values())
+        print(f"  Subsampled {total_subsampled} images")
+        for dx_category, images in subsample_result.items():
+            print(f"    {dx_category}: {len(images)} images")
+
+        # Create dataloaders from subsampled data
+        train_loader, val_loader, test_loader = subsample_dataloader(
+            data_path=data_path,
+            subsample_result=subsample_result,
+            image_size=image_size,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            random_seed=random_seed,
+        )
+    else:
+        print("\n[1/4] Loading full dataset...")
+        train_loader, val_loader, test_loader = create_dataloaders(
+            data_path=data_path,
+            image_size=image_size,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            random_seed=random_seed,
+        )
 
     # Step 2: Define model to train
     print(f"\n[2/4] Initializing {model_name}...")
 
     # Validate and create the specified model
-    model = _initialize_model(
-        model_name=model_name,
-        num_classes=num_classes,
-        learning_rate=learning_rate,
-        efficientnet_size=efficientnet_size,
-        pretrained=pretrained,
-        freeze_backbone=freeze_backbone,
-    )
-    if model is None:
+    if model_name == "BaselineCNN":
+        model = BaselineCNN(
+            num_classes=num_classes,
+            lr=learning_rate,
+        )
+    elif model_name == "ResNet":
+        model = ResNet(num_classes=num_classes, lr=learning_rate)
+    elif model_name == "EfficientNet":
+        model = EfficientNet(
+            num_classes=num_classes,
+            model_size=efficientnet_size,
+            lr=learning_rate,
+            pretrained=pretrained,
+            freeze_backbone=freeze_backbone,
+        )
+    else:
+        print(f"  ERROR: Unknown model '{model_name}'. Choose from: BaselineCNN, ResNet, EfficientNet")
         return
 
     print(f"  Model: {model_name}")
-    if model_name in ["ResNet", "EfficientNet"]:
-        print(f"    Pretrained: {pretrained}")
-        print(f"    Freeze backbone: {freeze_backbone}")
+    if model_name == "ResNet":
+        print(f"    Base channel: {cfg.model.base_channel}")
+        print(f"    Output channels: {list(cfg.model.output_channels)}")
     if model_name == "EfficientNet":
-        print(f"    Model size: {efficientnet_size}")
-
-    # Initialize W&B logger
-    wandb_logger = None
-    if use_wandb:
-        wandb_config = {
-            "model_name": model_name,
-            "data_path": data_path,
-            "subsample_percentage": subsample_percentage,
-            "image_size": image_size,
-            "batch_size": batch_size,
-            "max_epochs": max_epochs,
-            "learning_rate": learning_rate,
-            "num_classes": num_classes,
-            "random_seed": random_seed,
-            "efficientnet_size": efficientnet_size if model_name == "EfficientNet" else None,
-            "pretrained": pretrained if model_name in ["ResNet", "EfficientNet"] else None,
-            "freeze_backbone": freeze_backbone if model_name in ["ResNet", "EfficientNet"] else None,
-        }
-        run_name = wandb_run_name or f"{model_name}-{subsample_percentage or 'full'}"
-        wandb_logger = WandbLogger(
-            project=wandb_project,
-            name=run_name,
-            config=wandb_config,
-            log_model=True,  # Log model checkpoints to W&B
-        )
-        print(f"\n  W&B logging enabled: {wandb_project}/{run_name}")
+        print(f"    Model size: {cfg.model.model_size}")
+        print(f"    Pretrained: {cfg.model.pretrained}")
+        print(f"    Freeze backbone: {cfg.model.freeze_backbone}")
 
     # Step 3: Train all models
     print("\n[3/4] Training models...")
@@ -247,7 +264,8 @@ def train(
             train_loader=train_loader,
             val_loader=val_loader,
             model_name=model_name,
-            epochs=max_epochs,
+            epochs=cfg.training.max_epochs,
+            patience=cfg.training.patience,
             output_dir=output_dir,
             wandb_logger=wandb_logger,
         )
@@ -255,8 +273,8 @@ def train(
         print(f"  ERROR: Failed to train {model_name}: {str(e)}")
         return
 
-    # Step 4: Select best model and save results
-    print("\n[4/4] Selecting best model...")
+    # Step 4: Save results
+    print("\n[4/4] Saving results...")
 
     print("\n" + "=" * 80)
     print("TRAINING SUMMARY")
@@ -271,18 +289,7 @@ def train(
         "model": model_name,
         "val_loss": training_metrics["best_val_loss"],
         "checkpoint_path": training_metrics["checkpoint_path"],
-        "configuration": {
-            "data_path": data_path,
-            "subsample_percentage": subsample_percentage,
-            "image_size": image_size,
-            "batch_size": batch_size,
-            "max_epochs": max_epochs,
-            "learning_rate": learning_rate,
-            "random_seed": random_seed,
-            "efficientnet_size": efficientnet_size if model_name == "EfficientNet" else None,
-            "pretrained": pretrained if model_name in ["ResNet", "EfficientNet"] else None,
-            "freeze_backbone": freeze_backbone if model_name in ["ResNet", "EfficientNet"] else None,
-        },
+        "configuration": OmegaConf.to_container(cfg, resolve=True),
     }
 
     with open(results_path, "w") as f:
@@ -298,19 +305,29 @@ def train(
 
 
 if __name__ == "__main__":
-    # Example usage:
-    # Train BaselineCNN:
-    # python train.py --model-name BaselineCNN --data-path data/raw/ham10000 --max-epochs 20
+    # Hydra Usage Examples:
     #
-    # Train ResNet with pretrained weights:
-    # python train.py --model-name ResNet --pretrained --max-epochs 20
+    # Train with default config (BaselineCNN):
+    #   uv run src/mlops_project/train.py
     #
-    # Train EfficientNet B3 with frozen backbone:
-    # python train.py --model-name EfficientNet --efficientnet-size b3 --freeze-backbone --max-epochs 15
+    # Train ResNet (override model config group):
+    #   uv run src/mlops_project/train.py model=resnet
     #
-    # With subsampling (30% of data):
-    # python train.py --model-name ResNet --subsample-percentage 0.3 --max-epochs 10
+    # Train EfficientNet:
+    #   uv run src/mlops_project/train.py model=efficientnet
     #
-    # *BEST FOR QUICK TESTING* (1% data, 5 epochs):
-    # python train.py --model-name BaselineCNN --subsample-percentage 0.01 --max-epochs 5 --batch-size 16
-    app()
+    # Override specific parameters:
+    #   uv run src/mlops_project/train.py model=resnet training.max_epochs=10 data.batch_size=16
+    #
+    # Use subsampling (10% of data):
+    #   uv run src/mlops_project/train.py data.subsample_percentage=0.1
+    #
+    # Quick test (1% data, 5 epochs):
+    #   uv run src/mlops_project/train.py data.subsample_percentage=0.01 training.max_epochs=5
+    #
+    # Change learning rate:
+    #   uv run src/mlops_project/train.py model=efficientnet model.lr=0.0001
+    #
+    # EfficientNet with different model size:
+    #   uv run src/mlops_project/train.py model=efficientnet model.model_size=b3 data.image_size=300
+    train()
