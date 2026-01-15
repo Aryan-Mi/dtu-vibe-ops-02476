@@ -12,10 +12,10 @@ from torchvision.transforms import InterpolationMode
 # Mapping of diagnosis codes to class indices
 DX_TO_CLASS = {
     "nv": 0,  # Melanocytic nevi
-    "mel": 1,  # Melanoma
+    "mel": 1,  # Melanoma - CANCER
     "bkl": 2,  # Benign keratosis
-    "bcc": 3,  # Basal cell carcinoma
-    "akiec": 4,  # Actinic keratoses
+    "bcc": 3,  # Basal cell carcinoma - CANCER
+    "akiec": 4,  # Actinic keratoses - CANCER
     "vasc": 5,  # Vascular lesions
     "df": 6,  # Dermatofibroma
 }
