@@ -1,14 +1,9 @@
-name: Build Docker Images
+name: Build and Push Docker Images
 
 on:
   push:
     branches:
       - main
-    paths:
-      - 'dockerfiles/**'
-      - 'src/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
   pull_request:
     branches:
       - main
@@ -17,47 +12,107 @@ on:
       - 'src/**'
       - 'pyproject.toml'
       - 'uv.lock'
+      - '.github/workflows/docker-build.yaml'
   workflow_dispatch:  # Allow manual triggering
+
+env:
+  REGISTRY: docker.io
 
 jobs:
   build-train:
-    name: Build Train Docker Image
+    name: Build and Push Train Docker Image
     runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Verify Docker Hub secrets
+        if: github.event_name == 'push'
+        run: |
+          if [ -z "${{ secrets.DOCKER_HUB_USERNAME }}" ]; then
+            echo "ERROR: DOCKER_HUB_USERNAME secret is empty or not set in production environment"
+            echo "Please go to: Settings > Environments > production > Add secret"
+            exit 1
+          fi
+          if [ -z "${{ secrets.DOCKER_HUB_TOKEN }}" ]; then
+            echo "ERROR: DOCKER_HUB_TOKEN secret is empty or not set in production environment"
+            echo "Please go to: Settings > Environments > production > Add secret"
+            exit 1
+          fi
+          echo "Secrets verified successfully"
 
-      - name: Build train image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: dockerfiles/train.dockerfile
-          push: false  # Only build, don't push
-          tags: train:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push'
+        run: |
+          echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login \
+            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
+
+      - name: Build the Docker image
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            docker build . --file dockerfiles/train.dockerfile \
+              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:${{ github.sha }} \
+              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:latest
+          else
+            docker build . --file dockerfiles/train.dockerfile \
+              --tag dtu-vibe-ops-02476-train:${{ github.sha }}
+          fi
+
+      - name: Push Docker image
+        if: github.event_name == 'push'
+        run: |
+          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:${{ github.sha }}
+          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:latest
 
   build-inference:
-    name: Build Inference Docker Image
+    name: Build and Push Inference Docker Image
     runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Verify Docker Hub secrets
+        if: github.event_name == 'push'
+        run: |
+          if [ -z "${{ secrets.DOCKER_HUB_USERNAME }}" ]; then
+            echo "ERROR: DOCKER_HUB_USERNAME secret is empty or not set in production environment"
+            echo "Please go to: Settings > Environments > production > Add secret"
+            exit 1
+          fi
+          if [ -z "${{ secrets.DOCKER_HUB_TOKEN }}" ]; then
+            echo "ERROR: DOCKER_HUB_TOKEN secret is empty or not set in production environment"
+            echo "Please go to: Settings > Environments > production > Add secret"
+            exit 1
+          fi
+          echo "Secrets verified successfully"
 
-      - name: Build inference image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: dockerfiles/inference.dockerfile
-          push: false  # Only build, don't push
-          tags: inference:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push'
+        run: |
+          echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login \
+            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
+
+      - name: Build the Docker image
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            docker build . --file dockerfiles/inference.dockerfile \
+              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:${{ github.sha }} \
+              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:latest
+          else
+            docker build . --file dockerfiles/inference.dockerfile \
+              --tag dtu-vibe-ops-02476-inference:${{ github.sha }}
+          fi
+
+      - name: Push Docker image
+        if: github.event_name == 'push'
+        run: |
+          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:${{ github.sha }}
+          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:latest
