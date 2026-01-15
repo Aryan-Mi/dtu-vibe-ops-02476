@@ -258,7 +258,10 @@ def train(cfg: DictConfig) -> None:
     # Export the trained model to ONNX format
     onnx_model_path = checkpoint_path.with_suffix(".onnx")
     image_size = int(cfg.data.image_size)
-    dummy = torch.randn(1, 3, image_size, image_size, device="cuda" if torch.cuda.is_available() else "cpu")
+    dummy = torch.randn(1, 3, image_size, image_size, device="cpu")
+    
+    model.eval()                          # ← Very important!
+    model.to("cpu")
     model.to_onnx(
         file_path=str(onnx_model_path),
         input_sample=dummy,
@@ -268,8 +271,8 @@ def train(cfg: DictConfig) -> None:
             "input": {0: "batch_size"},
             "output": {0: "batch_size"},
         },
-        export_params=True,  # very important: include trained weights!
-        opset_version=17,  # modern & widely supported (16–18 usually fine)
+        export_params=True,  # Include trained weights!
+        opset_version=17, 
     )
 
     results = {
