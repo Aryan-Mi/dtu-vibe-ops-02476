@@ -1597,7 +1597,7 @@ requires-dist = [
     { name = "lightning", specifier = "==2.2.1" },
     { name = "numpy", specifier = ">=1.24.0,<2.0.0" },
     { name = "pandas", specifier = ">=2.3.3" },
-    { name = "pytorch-lightning", specifier = "==2.2.1" },
+    { name = "pytorch-lightning", specifier = "==2.6.0" },
     { name = "scikit-learn", specifier = ">=1.8.0" },
     { name = "torch", specifier = "==2.2.2", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torchvision", specifier = "==0.17.2", index = "https://download.pytorch.org/whl/cpu" },
@@ -2500,12 +2500,11 @@ wheels = [
 
 [[package]]
 name = "pytorch-lightning"
-version = "2.2.1"
+version = "2.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fsspec", extra = ["http"] },
     { name = "lightning-utilities" },
-    { name = "numpy" },
     { name = "packaging" },
     { name = "pyyaml" },
     { name = "torch", version = "2.2.2", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.13' and platform_machine == 'aarch64' and platform_python_implementation == 'CPython' and sys_platform == 'linux') or (python_full_version < '3.13' and sys_platform == 'darwin')" },
@@ -2514,9 +2513,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/23/9b/da17991bde2a07d01454a1291ef72257363ba99726603451d78c65f9c952/pytorch-lightning-2.2.1.tar.gz", hash = "sha256:aa3be30c9109239a371748565a7f4b7b41ea1395725c30e04426cf946b3e2745", size = 615200, upload-time = "2024-03-04T18:59:36.127Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/07/d7/e3963d9669758f93b07941f4e2e82a394eb3d0980e29baa4764f3bad6689/pytorch_lightning-2.6.0.tar.gz", hash = "sha256:25b0d4f05e1f33b72be0920c34d0465777fe5f623228f9d6252b4b0f685d7037", size = 658853, upload-time = "2025-11-28T09:34:13.098Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/56/ed/192d7518b15a06452f480346eeebe1d1d4595af80687e142b2e6f18539fd/pytorch_lightning-2.2.1-py3-none-any.whl", hash = "sha256:b7efdd46a7ede4d66814a6afc28d0dfadd8eea1bb8bddab4fd2ea36c099af685", size = 801598, upload-time = "2024-03-04T18:59:32.538Z" },
+    { url = "https://files.pythonhosted.org/packages/77/eb/cc6dbfe70d15318dbce82674b1e8057cef2634ca9f9121a16b8a06c630db/pytorch_lightning-2.6.0-py3-none-any.whl", hash = "sha256:ee72cff4b8c983ecfaae8599382544bd5236d9eb300adc7dd305f359195f4e79", size = 849476, upload-time = "2025-11-28T09:34:11.271Z" },
 ]
 
 [[package]]
