@@ -3,8 +3,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import hydra
-import onnx
-import onnxruntime
 import pytorch_lightning as pl
 import torch
 from omegaconf import DictConfig, OmegaConf

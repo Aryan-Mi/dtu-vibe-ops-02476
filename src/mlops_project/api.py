@@ -61,8 +61,7 @@ def read_root():
     """Root endpoint."""
     if model_session is None:
         return {"error": "Model not loaded"}
-    else:
-        return {"message": "Skin Lesion Classification API", "status": "ready"}
+    return {"message": "Skin Lesion Classification API", "status": "ready"}
 
 
 @app.post("/inference")
