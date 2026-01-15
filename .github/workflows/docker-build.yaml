@@ -31,39 +31,41 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Verify Docker Hub secrets
-        if: github.event_name == 'push'
         run: |
-          if [ -z "${{ secrets.DOCKER_HUB_USERNAME }}" ]; then
-            echo "ERROR: DOCKER_HUB_USERNAME secret is empty or not set in production environment"
-            echo "Please go to: Settings > Environments > production > Add secret"
+          if [ -z "${{ secrets.DOCKER_HUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKER_HUB_TOKEN }}" ]; then
+            echo "ERROR: Docker Hub secrets not configured"
             exit 1
           fi
-          if [ -z "${{ secrets.DOCKER_HUB_TOKEN }}" ]; then
-            echo "ERROR: DOCKER_HUB_TOKEN secret is empty or not set in production environment"
-            echo "Please go to: Settings > Environments > production > Add secret"
-            exit 1
-          fi
-          echo "Secrets verified successfully"
+
+      - name: Configure Docker credential helper
+        run: |
+          mkdir -p ~/.docker ~/.local/bin
+          cat > ~/.local/bin/docker-credential-helper << 'EOF'
+          #!/bin/bash
+          case "$1" in
+            store) cat > /dev/null ;;
+            get) echo '{"Username":"","Secret":""}' ;;
+            erase) cat > /dev/null ;;
+          esac
+          EOF
+          chmod +x ~/.local/bin/docker-credential-helper
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.local/bin:$PATH"
+          echo '{"credHelpers":{"docker.io":"helper"}}' > ~/.docker/config.json
 
       - name: Log in to Docker Hub
-        if: github.event_name == 'push'
         run: |
           echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login \
-            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
+            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io || exit 1
 
       - name: Build the Docker image
         run: |
-          if [ "${{ github.event_name }}" == "push" ]; then
-            docker build . --file dockerfiles/train.dockerfile \
-              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:${{ github.sha }} \
-              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:latest
-          else
-            docker build . --file dockerfiles/train.dockerfile \
-              --tag dtu-vibe-ops-02476-train:${{ github.sha }}
-          fi
+          docker build . --file dockerfiles/train.dockerfile \
+            --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:${{ github.sha }} \
+            --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:latest
 
       - name: Push Docker image
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:${{ github.sha }}
           docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:latest
@@ -80,39 +82,41 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Verify Docker Hub secrets
-        if: github.event_name == 'push'
         run: |
-          if [ -z "${{ secrets.DOCKER_HUB_USERNAME }}" ]; then
-            echo "ERROR: DOCKER_HUB_USERNAME secret is empty or not set in production environment"
-            echo "Please go to: Settings > Environments > production > Add secret"
+          if [ -z "${{ secrets.DOCKER_HUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKER_HUB_TOKEN }}" ]; then
+            echo "ERROR: Docker Hub secrets not configured"
             exit 1
           fi
-          if [ -z "${{ secrets.DOCKER_HUB_TOKEN }}" ]; then
-            echo "ERROR: DOCKER_HUB_TOKEN secret is empty or not set in production environment"
-            echo "Please go to: Settings > Environments > production > Add secret"
-            exit 1
-          fi
-          echo "Secrets verified successfully"
+
+      - name: Configure Docker credential helper
+        run: |
+          mkdir -p ~/.docker ~/.local/bin
+          cat > ~/.local/bin/docker-credential-helper << 'EOF'
+          #!/bin/bash
+          case "$1" in
+            store) cat > /dev/null ;;
+            get) echo '{"Username":"","Secret":""}' ;;
+            erase) cat > /dev/null ;;
+          esac
+          EOF
+          chmod +x ~/.local/bin/docker-credential-helper
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.local/bin:$PATH"
+          echo '{"credHelpers":{"docker.io":"helper"}}' > ~/.docker/config.json
 
       - name: Log in to Docker Hub
-        if: github.event_name == 'push'
         run: |
           echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login \
-            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
+            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io || exit 1
 
       - name: Build the Docker image
         run: |
-          if [ "${{ github.event_name }}" == "push" ]; then
-            docker build . --file dockerfiles/inference.dockerfile \
-              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:${{ github.sha }} \
-              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:latest
-          else
-            docker build . --file dockerfiles/inference.dockerfile \
-              --tag dtu-vibe-ops-02476-inference:${{ github.sha }}
-          fi
+          docker build . --file dockerfiles/inference.dockerfile \
+            --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:${{ github.sha }} \
+            --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:latest
 
       - name: Push Docker image
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:${{ github.sha }}
           docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:latest
