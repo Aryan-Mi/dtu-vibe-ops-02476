@@ -11,6 +11,7 @@ jobs:
   build-train:
     name: Build and Push Train Docker Image
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - name: Checkout code
@@ -33,6 +34,7 @@ jobs:
   build-inference:
     name: Build and Push Inference Docker Image
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - name: Checkout code
