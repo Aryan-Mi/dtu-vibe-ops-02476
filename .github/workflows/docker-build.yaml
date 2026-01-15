@@ -2,64 +2,25 @@ name: Build and Push Docker Images
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
-    paths:
-      - 'dockerfiles/**'
-      - 'src/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - '.github/workflows/docker-build.yaml'
-  workflow_dispatch:  # Allow manual triggering
-
-env:
-  REGISTRY: docker.io
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build-train:
     name: Build and Push Train Docker Image
     runs-on: ubuntu-latest
     environment: production
-    permissions:
-      contents: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Verify Docker Hub secrets
-        run: |
-          if [ -z "${{ secrets.DOCKER_HUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKER_HUB_TOKEN }}" ]; then
-            echo "ERROR: Docker Hub secrets not configured"
-            exit 1
-          fi
-
-      - name: Configure Docker credential helper
-        run: |
-          mkdir -p ~/.docker ~/.local/bin
-          cat > ~/.local/bin/docker-credential-helper << 'EOF'
-          #!/bin/bash
-          case "$1" in
-            store) cat > /dev/null ;;
-            get) echo '{"Username":"","Secret":""}' ;;
-            erase) cat > /dev/null ;;
-          esac
-          EOF
-          chmod +x ~/.local/bin/docker-credential-helper
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-          export PATH="$HOME/.local/bin:$PATH"
-          echo '{"credHelpers":{"docker.io":"helper"}}' > ~/.docker/config.json
-
-      - name: Log in to Docker Hub
+      - name: Build and push train image
         run: |
           echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login \
-            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io || exit 1
-
-      - name: Build the Docker image
-        run: |
+            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
           docker build . --file dockerfiles/train.dockerfile \
             --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:${{ github.sha }} \
             --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:latest
@@ -74,43 +35,15 @@ jobs:
     name: Build and Push Inference Docker Image
     runs-on: ubuntu-latest
     environment: production
-    permissions:
-      contents: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Verify Docker Hub secrets
-        run: |
-          if [ -z "${{ secrets.DOCKER_HUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKER_HUB_TOKEN }}" ]; then
-            echo "ERROR: Docker Hub secrets not configured"
-            exit 1
-          fi
-
-      - name: Configure Docker credential helper
-        run: |
-          mkdir -p ~/.docker ~/.local/bin
-          cat > ~/.local/bin/docker-credential-helper << 'EOF'
-          #!/bin/bash
-          case "$1" in
-            store) cat > /dev/null ;;
-            get) echo '{"Username":"","Secret":""}' ;;
-            erase) cat > /dev/null ;;
-          esac
-          EOF
-          chmod +x ~/.local/bin/docker-credential-helper
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-          export PATH="$HOME/.local/bin:$PATH"
-          echo '{"credHelpers":{"docker.io":"helper"}}' > ~/.docker/config.json
-
-      - name: Log in to Docker Hub
+      - name: Build and push inference image
         run: |
           echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login \
-            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io || exit 1
-
-      - name: Build the Docker image
-        run: |
+            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
           docker build . --file dockerfiles/inference.dockerfile \
             --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:${{ github.sha }} \
             --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:latest
