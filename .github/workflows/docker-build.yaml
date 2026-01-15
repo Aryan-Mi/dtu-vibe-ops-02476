@@ -1,4 +1,4 @@
-name: Build Docker Images
+name: Build and Push Docker Images
 
 on:
   push:
@@ -19,10 +19,16 @@ on:
       - 'uv.lock'
   workflow_dispatch:  # Allow manual triggering
 
+env:
+  REGISTRY: docker.io
+
 jobs:
   build-train:
-    name: Build Train Docker Image
+    name: Build and Push Train Docker Image
     runs-on: ubuntu-latest
+    environment: _production
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
@@ -31,19 +37,40 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build train image
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Extract metadata for train image
+        id: meta-train
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push train image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: dockerfiles/train.dockerfile
-          push: false  # Only build, don't push
-          tags: train:latest
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta-train.outputs.tags }}
+          labels: ${{ steps.meta-train.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   build-inference:
-    name: Build Inference Docker Image
+    name: Build and Push Inference Docker Image
     runs-on: ubuntu-latest
+    environment: _production
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
@@ -52,12 +79,30 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build inference image
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Extract metadata for inference image
+        id: meta-inference
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push inference image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: dockerfiles/inference.dockerfile
-          push: false  # Only build, don't push
-          tags: inference:latest
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta-inference.outputs.tags }}
+          labels: ${{ steps.meta-inference.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
