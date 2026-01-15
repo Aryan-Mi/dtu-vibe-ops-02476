@@ -30,7 +30,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Verify Docker Hub secrets
+      - name: Verify Docker Hub secrets and variables
         if: github.event_name == 'push'
         run: |
           if [ -z "${{ secrets.DOCKER_HUB_USERNAME }}" ]; then
@@ -43,7 +43,12 @@ jobs:
             echo "Please go to: Settings > Environments > production > Add secret"
             exit 1
           fi
-          echo "Secrets verified successfully"
+          if [ -z "${{ vars.DOCKER_HUB_REPOSITORY }}" ]; then
+            echo "ERROR: DOCKER_HUB_REPOSITORY variable is empty or not set in production environment"
+            echo "Please go to: Settings > Environments > production > Add variable"
+            exit 1
+          fi
+          echo "All secrets and variables verified successfully"
 
       - name: Log in to Docker Hub
         if: github.event_name == 'push'
@@ -55,18 +60,18 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" == "push" ]; then
             docker build . --file dockerfiles/train.dockerfile \
-              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:${{ github.sha }} \
-              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:latest
+              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ vars.DOCKER_HUB_REPOSITORY }}-train:${{ github.sha }} \
+              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ vars.DOCKER_HUB_REPOSITORY }}-train:latest
           else
             docker build . --file dockerfiles/train.dockerfile \
-              --tag dtu-vibe-ops-02476-train:${{ github.sha }}
+              --tag ${{ vars.DOCKER_HUB_REPOSITORY }}-train:${{ github.sha }}
           fi
 
       - name: Push Docker image
         if: github.event_name == 'push'
         run: |
-          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:${{ github.sha }}
-          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:latest
+          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ vars.DOCKER_HUB_REPOSITORY }}-train:${{ github.sha }}
+          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ vars.DOCKER_HUB_REPOSITORY }}-train:latest
 
   build-inference:
     name: Build and Push Inference Docker Image
@@ -79,7 +84,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Verify Docker Hub secrets
+      - name: Verify Docker Hub secrets and variables
         if: github.event_name == 'push'
         run: |
           if [ -z "${{ secrets.DOCKER_HUB_USERNAME }}" ]; then
@@ -92,7 +97,12 @@ jobs:
             echo "Please go to: Settings > Environments > production > Add secret"
             exit 1
           fi
-          echo "Secrets verified successfully"
+          if [ -z "${{ vars.DOCKER_HUB_REPOSITORY }}" ]; then
+            echo "ERROR: DOCKER_HUB_REPOSITORY variable is empty or not set in production environment"
+            echo "Please go to: Settings > Environments > production > Add variable"
+            exit 1
+          fi
+          echo "All secrets and variables verified successfully"
 
       - name: Log in to Docker Hub
         if: github.event_name == 'push'
@@ -104,15 +114,15 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" == "push" ]; then
             docker build . --file dockerfiles/inference.dockerfile \
-              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:${{ github.sha }} \
-              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:latest
+              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ vars.DOCKER_HUB_REPOSITORY }}-inference:${{ github.sha }} \
+              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ vars.DOCKER_HUB_REPOSITORY }}-inference:latest
           else
             docker build . --file dockerfiles/inference.dockerfile \
-              --tag dtu-vibe-ops-02476-inference:${{ github.sha }}
+              --tag ${{ vars.DOCKER_HUB_REPOSITORY }}-inference:${{ github.sha }}
           fi
 
       - name: Push Docker image
         if: github.event_name == 'push'
         run: |
-          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:${{ github.sha }}
-          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:latest
+          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ vars.DOCKER_HUB_REPOSITORY }}-inference:${{ github.sha }}
+          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ vars.DOCKER_HUB_REPOSITORY }}-inference:latest
