@@ -33,47 +33,30 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set image name for train
-        id: image-train
-        run: |
-          if [ "${{ github.event_name }}" == "push" ]; then
-            echo "image=${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train" >> $GITHUB_OUTPUT
-          else
-            echo "image=dtu-vibe-ops-02476-train" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: actions/checkout@v5
 
       - name: Log in to Docker Hub
         if: github.event_name == 'push'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+        run: |
+          echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login \
+            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
 
-      - name: Extract metadata for train image
-        id: meta-train
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ steps.image-train.outputs.image }}
-          tags: |
-            type=ref,event=branch
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+      - name: Build the Docker image
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            docker build . --file dockerfiles/train.dockerfile \
+              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:${{ github.sha }} \
+              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:latest
+          else
+            docker build . --file dockerfiles/train.dockerfile \
+              --tag dtu-vibe-ops-02476-train:${{ github.sha }}
+          fi
 
-      - name: Build and push train image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: dockerfiles/train.dockerfile
-          push: ${{ github.event_name == 'push' }}
-          tags: ${{ steps.meta-train.outputs.tags }}
-          labels: ${{ steps.meta-train.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Push Docker image
+        if: github.event_name == 'push'
+        run: |
+          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:${{ github.sha }}
+          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:latest
 
   build-inference:
     name: Build and Push Inference Docker Image
@@ -84,44 +67,27 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set image name for inference
-        id: image-inference
-        run: |
-          if [ "${{ github.event_name }}" == "push" ]; then
-            echo "image=${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference" >> $GITHUB_OUTPUT
-          else
-            echo "image=dtu-vibe-ops-02476-inference" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: actions/checkout@v5
 
       - name: Log in to Docker Hub
         if: github.event_name == 'push'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+        run: |
+          echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login \
+            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
 
-      - name: Extract metadata for inference image
-        id: meta-inference
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ steps.image-inference.outputs.image }}
-          tags: |
-            type=ref,event=branch
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+      - name: Build the Docker image
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            docker build . --file dockerfiles/inference.dockerfile \
+              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:${{ github.sha }} \
+              --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:latest
+          else
+            docker build . --file dockerfiles/inference.dockerfile \
+              --tag dtu-vibe-ops-02476-inference:${{ github.sha }}
+          fi
 
-      - name: Build and push inference image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: dockerfiles/inference.dockerfile
-          push: ${{ github.event_name == 'push' }}
-          tags: ${{ steps.meta-inference.outputs.tags }}
-          labels: ${{ steps.meta-inference.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Push Docker image
+        if: github.event_name == 'push'
+        run: |
+          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:${{ github.sha }}
+          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:latest
