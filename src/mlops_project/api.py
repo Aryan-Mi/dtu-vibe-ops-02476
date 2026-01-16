@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import onnxruntime as ort
@@ -7,7 +8,10 @@ from fastapi import FastAPI, File, UploadFile
 from hydra import compose, initialize_config_dir
 from PIL import Image
 
-from data import CLASS_TO_DX, get_transforms
+from mlops_project.data import CLASS_TO_DX, get_transforms
+
+if TYPE_CHECKING:
+    from torch import Tensor
 
 # 1. Initialization
 MODEL_PATH = (
@@ -85,10 +89,10 @@ async def perform_inference(file: UploadFile = File(...)):
 
     # 2. Apply preprocessing transforms
     transform = get_transforms(image_size=IMAGE_SIZE, augment=False)
-    image_tensor = transform(i_image)
+    image_tensor = cast("Tensor", transform(i_image))
 
     # 3. Add batch dimension and convert to numpy
-    input_data = {model_session.get_inputs()[0].name: image_tensor.unsqueeze(0).numpy()}
+    input_data = {model_session.get_inputs()[0].name: image_tensor.unsqueeze(0).detach().cpu().numpy()}
 
     # 4. Run inference
     outputs = model_session.run(None, input_data)  # Basically calling forward - outputs logits
