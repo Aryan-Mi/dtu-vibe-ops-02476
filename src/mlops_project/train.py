@@ -11,7 +11,7 @@ from pytorch_lightning.loggers import CSVLogger, WandbLogger
 
 import wandb
 from mlops_project.dataloader import create_dataloaders, set_seed, subsample_dataloader
-from mlops_project.model import BaselineCNN, EfficientNet, ResNet
+from mlops_project.model import INPUT_SIZE, BaselineCNN, EfficientNet, ResNet
 from mlops_project.subsample import subsample_dataset
 
 if TYPE_CHECKING:
@@ -128,13 +128,21 @@ def create_model(cfg: DictConfig) -> pl.LightningModule:
     raise ValueError(msg)
 
 
-@hydra.main(version_base=None, config_path="../../configs", config_name="config")
-def train(cfg: DictConfig) -> None:
-    """Train specified model on skin lesion dataset with Hydra configuration and W&B logging.
+def train_with_config(cfg: DictConfig) -> None:
+    """Core training logic that handles both normal runs and sweep iterations.
 
     Args:
         cfg: Hydra configuration object
     """
+    # Auto-adjust image size for EfficientNet model variants
+    if cfg.model.name == "EfficientNet" and hasattr(cfg.model, "model_size"):
+        model_size = cfg.model.model_size
+        if model_size in INPUT_SIZE:
+            cfg.data.image_size = INPUT_SIZE[model_size]
+            print(f"Auto-adjusted image_size to {cfg.data.image_size} for EfficientNet {model_size}")
+        else:
+            raise ValueError(f"Unknown EfficientNet model size '{model_size}'")
+        
     # Print resolved configuration
     print("=" * 80)
     print("SKIN LESION CLASSIFICATION - MODEL TRAINING")
@@ -292,6 +300,23 @@ def train(cfg: DictConfig) -> None:
     if use_wandb:
         wandb.finish()
         print("\nW&B run finished. View results at: https://wandb.ai")
+
+
+@hydra.main(version_base=None, config_path="../../configs", config_name="config")
+def train(cfg: DictConfig) -> None:
+    """Train specified model on skin lesion dataset with Hydra configuration and W&B logging.
+    
+    Supports both normal training runs and W&B sweeps.
+
+    Args:
+        cfg: Hydra configuration object
+    """
+    # Check if running as part of a W&B sweep
+    if wandb.run is not None and wandb.run.sweep_id is not None:
+        # Update config with sweep parameters from wandb
+        cfg = OmegaConf.merge(cfg, OmegaConf.create(dict(wandb.config)))
+    
+    train_with_config(cfg)
 
 
 if __name__ == "__main__":
