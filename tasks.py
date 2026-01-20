@@ -52,3 +52,33 @@ def build_docs(ctx: Context) -> None:
 def serve_docs(ctx: Context) -> None:
     """Serve documentation."""
     ctx.run("uv run mkdocs serve --config-file docs/mkdocs.yaml", echo=True, pty=not WINDOWS)
+
+
+@task
+def create_demo_model(ctx: Context) -> None:
+    """Create a dummy ONNX model for testing the pipeline."""
+    ctx.run("uv run python -m mlops_project.create_demo_model", echo=True, pty=not WINDOWS)
+
+
+@task
+def deploy_to_cloud_run(ctx: Context, project_id: str, region: str = "europe-west1") -> None:
+    """Deploy API to Google Cloud Run."""
+    print(f"Deploying to project: {project_id}, region: {region}")
+    
+    # Tag locally
+    image_name = f"gcr.io/{project_id}/skin-lesion-api:latest"
+    ctx.run(f"docker build -t {image_name} -f dockerfiles/api.dockerfile .", echo=True, pty=not WINDOWS)
+    
+    # Push to GCR
+    ctx.run(f"docker push {image_name}", echo=True, pty=not WINDOWS)
+    
+    # Deploy to Cloud Run
+    ctx.run(
+        f"gcloud run deploy skin-lesion-api "
+        f"--image {image_name} "
+        f"--platform managed "
+        f"--region {region} "
+        f"--allow-unauthenticated "
+        f"--port 8080",
+        echo=True, pty=not WINDOWS
+    )

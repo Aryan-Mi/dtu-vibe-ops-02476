@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -14,9 +15,7 @@ if TYPE_CHECKING:
     from torch import Tensor
 
 # 1. Initialization
-MODEL_PATH = (
-    Path(__file__).parent.parent.parent / "models" / "EfficientNet" / "EfficientNet-epoch=04-val_loss=0.4910.onnx"
-)  # Hardcoded for now  # noqa: E501
+MODEL_PATH = Path(os.getenv("MODEL_PATH", Path(__file__).parent.parent.parent / "models" / "EfficientNet" / "EfficientNet-epoch=04-val_loss=0.4910.onnx"))
 IMAGE_SIZE = 224  # Default image size, will be updated from config
 
 # Binary mapping: 0 = non-cancer, 1 = cancer
