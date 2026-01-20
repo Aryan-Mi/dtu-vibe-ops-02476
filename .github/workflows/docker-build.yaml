@@ -19,6 +19,10 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    outputs:
+      image-uri-sha: ${{ steps.image-info.outputs.image-uri-sha }}
+      image-uri-latest: ${{ steps.image-info.outputs.image-uri-latest }}
+      commit-sha: ${{ github.sha }}
 
     steps:
       - name: Checkout code
@@ -49,6 +53,45 @@ jobs:
           export IMAGE_TAG=${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/dtu-vibe-ops-02476-train
           docker push ${IMAGE_TAG}:${{ github.sha }}
           docker push ${IMAGE_TAG}:latest
+
+      - name: Set image info outputs
+        id: image-info
+        run: |
+          IMAGE_TAG_BASE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/dtu-vibe-ops-02476-train"
+          echo "image-uri-sha=${IMAGE_TAG_BASE}:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "image-uri-latest=${IMAGE_TAG_BASE}:latest" >> $GITHUB_OUTPUT
+
+      - name: Build Summary
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "## 🚀 Training Image Built Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Image Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image URI (SHA)**: \`${{ steps.image-info.outputs.image-uri-sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image URI (Latest)**: \`${{ steps.image-info.outputs.image-uri-latest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps: Submit Training Job" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Option 1: Use Latest Image (Recommended)" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "./scripts/submit_training_job.sh" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Option 2: Use Specific Commit Image" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "./scripts/submit_training_job.sh --commit-sha=${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Option 3: Use Custom Image Tag" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "./scripts/submit_training_job.sh --image-tag=${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### With Custom Training Parameters" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "./scripts/submit_training_job.sh --model=efficientnet --data.subsample_percentage=0.1" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
   build-inference:
     name: Build and Push Inference Docker Image
