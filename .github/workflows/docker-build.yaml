@@ -16,6 +16,7 @@ jobs:
   build-train:
     name: Build and Push Train Docker Image
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       contents: read
       id-token: write
@@ -27,14 +28,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-
-      - name: Validate GCP credentials
-        run: |
-          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
-            echo "Error: GCP_SA_KEY secret is not set or is empty"
-            echo "Please ensure the secret is configured in GitHub repository settings"
-            exit 1
-          fi
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -106,6 +99,7 @@ jobs:
   build-inference:
     name: Build and Push Inference Docker Image
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       contents: read
       id-token: write
@@ -113,14 +107,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-
-      - name: Validate GCP credentials
-        run: |
-          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
-            echo "Error: GCP_SA_KEY secret is not set or is empty"
-            echo "Please ensure the secret is configured in GitHub repository settings"
-            exit 1
-          fi
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
