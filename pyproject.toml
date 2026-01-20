@@ -40,6 +40,7 @@ dependencies = [
     "onnxscript==0.1.0",
     "python-multipart>=0.0.21",
     "httpx>=0.28.1",
+    "torch-tb-profiler>=0.4.3",
 ]
 
 [dependency-groups]
