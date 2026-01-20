@@ -42,7 +42,7 @@ class ProfilerCallback(pl.Callback):
             on_trace_ready=tensorboard_trace_handler(str(self.output_dir)),
             record_shapes=True,
             profile_memory=True,
-            with_stack=True,
+            with_stack=False,  # Disabled to avoid PyTorch bug
             with_flops=True,
             with_modules=True,
         )
@@ -51,29 +51,47 @@ class ProfilerCallback(pl.Callback):
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         """Step the profiler after each batch."""
         if self.profiler is not None:
-            self.profiler.step()
+            try:
+                self.profiler.step()
+            except RuntimeError as e:
+                if "stack.empty()" in str(e):
+                    # Known PyTorch profiler bug - skip this step
+                    if batch_idx % 10 == 0:  # Only print every 10th to avoid spam
+                        print(f"  Profiler step skipped at batch {batch_idx} (known PyTorch issue)")
+                else:
+                    print(f"  Profiler error at batch {batch_idx}: {e}")
+                    # Continue training without profiling for this step
 
     def on_train_end(self, trainer, pl_module):
         """Stop profiler and export Chrome trace when training ends."""
         if self.profiler is not None:
-            self.profiler.stop()
+            try:
+                self.profiler.stop()
+            except Exception as e:  # noqa: BLE001
+                print(f"  Warning: Profiler stop error (traces may already be saved): {e}")
 
             # Export Chrome trace for manual viewing
             chrome_trace_path = self.output_dir / "chrome_trace.json"
-            if hasattr(self.profiler, "export_chrome_trace"):
-                self.profiler.export_chrome_trace(str(chrome_trace_path))
-                print(f"  Chrome trace exported to: {chrome_trace_path}")
-                print("  View in Chrome: chrome://tracing")
+            try:
+                if hasattr(self.profiler, "export_chrome_trace"):
+                    self.profiler.export_chrome_trace(str(chrome_trace_path))
+                    print(f"  Chrome trace exported to: {chrome_trace_path}")
+                    print("  View in Chrome: chrome://tracing")
+            except Exception as e:  # noqa: BLE001
+                print("  Note: Chrome trace export skipped (already saved via TensorBoard handler)")
 
             # Export profiler summary
             summary_path = self.output_dir / "profiler_summary.txt"
-            with open(summary_path, "w") as f:
-                if self.profiler.key_averages():
-                    f.write("Top 10 operations by CPU time:\n")
-                    f.write(self.profiler.key_averages().table(sort_by="cpu_time_total", row_limit=10))
-                    f.write("\n\nTop 10 operations by CUDA time:\n")
-                    f.write(self.profiler.key_averages().table(sort_by="cuda_time_total", row_limit=10))
-            print(f"  Profiler summary saved to: {summary_path}")
+            try:
+                with open(summary_path, "w") as f:
+                    if self.profiler.key_averages():
+                        f.write("Top 10 operations by CPU time:\n")
+                        f.write(self.profiler.key_averages().table(sort_by="cpu_time_total", row_limit=10))
+                        f.write("\n\nTop 10 operations by CUDA time:\n")
+                        f.write(self.profiler.key_averages().table(sort_by="cuda_time_total", row_limit=10))
+                print(f"  Profiler summary saved to: {summary_path}")
+            except Exception as e:  # noqa: BLE001
+                print(f"  Warning: Could not save profiler summary: {e}")
 
             print(f"  TensorBoard logs available at: {self.output_dir}")
             print(f"  Run: tensorboard --logdir={self.output_dir}")
