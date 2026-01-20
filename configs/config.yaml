@@ -31,6 +31,9 @@ wandb:
 paths:
   output_dir: "outputs/models"
   log_dir: "logs"
+  # GCS bucket for model storage (optional, can also use GCS_MODELS_BUCKET env var)
+  # Set to null or omit to disable GCS upload (models saved locally only)
+  gcs_bucket: null  # e.g., "gs://vibeops-models" or "vibeops-models"
 
 # Reproducibility
 seed: 42

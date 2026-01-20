@@ -1,4 +1,4 @@
-name: Build and Push Docker Images
+name: Build and Push Docker Images to Artifact Registry
 
 on:
   push:
@@ -7,49 +7,82 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'vibeops-483814' }}
+  REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
+  ARTIFACT_REGISTRY: ${{ vars.GCP_ARTIFACT_REGISTRY || 'dtu-vibe-ops' }}
+
 jobs:
   build-train:
     name: Build and Push Train Docker Image
     runs-on: ubuntu-latest
-    environment: production
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Build and push train image
-        run: |
-          echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login \
-            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
-          docker build . --file dockerfiles/train.dockerfile \
-            --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:${{ github.sha }} \
-            --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:latest
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Push Docker image
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${REGION}-docker.pkg.dev
+
+      - name: Build train image
+        run: |
+          export IMAGE_TAG=${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/dtu-vibe-ops-02476-train
+          docker build . --file dockerfiles/train.dockerfile \
+            --tag ${IMAGE_TAG}:${{ github.sha }} \
+            --tag ${IMAGE_TAG}:latest
+
+      - name: Push train image to Artifact Registry
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:${{ github.sha }}
-          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:latest
+          export IMAGE_TAG=${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/dtu-vibe-ops-02476-train
+          docker push ${IMAGE_TAG}:${{ github.sha }}
+          docker push ${IMAGE_TAG}:latest
 
   build-inference:
     name: Build and Push Inference Docker Image
     runs-on: ubuntu-latest
-    environment: production
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Build and push inference image
-        run: |
-          echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login \
-            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
-          docker build . --file dockerfiles/inference.dockerfile \
-            --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:${{ github.sha }} \
-            --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:latest
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Push Docker image
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${REGION}-docker.pkg.dev
+
+      - name: Build inference image
+        run: |
+          export IMAGE_TAG=${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/dtu-vibe-ops-02476-inference
+          docker build . --file dockerfiles/inference.dockerfile \
+            --tag ${IMAGE_TAG}:${{ github.sha }} \
+            --tag ${IMAGE_TAG}:latest
+
+      - name: Push inference image to Artifact Registry
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:${{ github.sha }}
-          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:latest
+          export IMAGE_TAG=${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/dtu-vibe-ops-02476-inference
+          docker push ${IMAGE_TAG}:${{ github.sha }}
+          docker push ${IMAGE_TAG}:latest

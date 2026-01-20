@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -16,6 +17,39 @@ from mlops_project.subsample import subsample_dataset
 
 if TYPE_CHECKING:
     from pytorch_lightning.loggers.logger import Logger
+
+try:
+    from google.cloud import storage
+except ImportError:
+    storage = None
+
+
+def upload_to_gcs(local_path: str | Path, gcs_bucket: str, gcs_path: str) -> str | None:
+    """Upload a file to GCS bucket.
+
+    Args:
+        local_path: Local file path to upload
+        gcs_bucket: GCS bucket name (without gs:// prefix)
+        gcs_path: Destination path in GCS bucket
+
+    Returns:
+        GCS URI (gs://bucket/path) if successful, None otherwise
+    """
+    if storage is None:
+        print("  ⚠ google-cloud-storage not available, skipping GCS upload")
+        return None
+
+    try:
+        client = storage.Client()
+        bucket = client.bucket(gcs_bucket)
+        blob = bucket.blob(gcs_path)
+        blob.upload_from_filename(str(local_path))
+        gcs_uri = f"gs://{gcs_bucket}/{gcs_path}"
+        print(f"  ✓ Uploaded to {gcs_uri}")
+        return gcs_uri
+    except Exception as e:  # noqa: BLE001
+        print(f"  ✗ Failed to upload to GCS: {str(e)}")
+        return None
 
 
 # Train models written in model.py and store results for comparison and selection of best model.
@@ -273,11 +307,40 @@ def train(cfg: DictConfig) -> None:
         opset_version=17,
     )
 
+    # Upload models to GCS if configured
+    gcs_bucket = cfg.paths.get("gcs_bucket") or os.getenv("GCS_MODELS_BUCKET")
+    checkpoint_gcs_path = None
+    onnx_gcs_path = None
+    results_gcs_path = None
+
+    if gcs_bucket:
+        print(f"\nUploading models to GCS bucket: {gcs_bucket}")
+        # Remove gs:// prefix if present
+        gcs_bucket = gcs_bucket.replace("gs://", "")
+
+        # Upload checkpoint
+        checkpoint_gcs_key = f"models/{model_name}/{checkpoint_path.name}"
+        checkpoint_gcs_path = upload_to_gcs(checkpoint_path, gcs_bucket, checkpoint_gcs_key)
+
+        # Upload ONNX model
+        onnx_gcs_key = f"models/{model_name}/{onnx_model_path.name}"
+        onnx_gcs_path = upload_to_gcs(onnx_model_path, gcs_bucket, onnx_gcs_key)
+
+        # Upload training results JSON
+        results_gcs_key = f"models/{model_name}/training_results.json"
+        results_gcs_path = upload_to_gcs(results_path, gcs_bucket, results_gcs_key)
+    else:
+        print("\n⚠ GCS bucket not configured, models saved locally only")
+        print("  Set paths.gcs_bucket in config or GCS_MODELS_BUCKET env var to enable GCS upload")
+
     results = {
         "model": model_name,
         "val_loss": training_metrics["best_val_loss"],
         "checkpoint_path": training_metrics["checkpoint_path"],
+        "checkpoint_gcs_path": checkpoint_gcs_path,
         "onnx_model_path": str(onnx_model_path),
+        "onnx_gcs_path": onnx_gcs_path,
+        "results_gcs_path": results_gcs_path,
         "configuration": OmegaConf.to_container(cfg, resolve=True),
     }
 
@@ -287,6 +350,10 @@ def train(cfg: DictConfig) -> None:
     print(f"\nResults saved to: {results_path}")
     print(f"Model checkpoint: {training_metrics['checkpoint_path']}")
     print(f"ONNX model exported to: {onnx_model_path}")
+    if checkpoint_gcs_path:
+        print(f"Checkpoint uploaded to: {checkpoint_gcs_path}")
+    if onnx_gcs_path:
+        print(f"ONNX model uploaded to: {onnx_gcs_path}")
 
     # Finish W&B run
     if use_wandb:
