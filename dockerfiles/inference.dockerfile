@@ -10,6 +10,7 @@ COPY uv.lock uv.lock
 COPY pyproject.toml pyproject.toml
 COPY README.md README.md
 COPY src src/
+COPY configs configs/
 
 # 3. Change work dir and sync dependencies with uv
 WORKDIR /
