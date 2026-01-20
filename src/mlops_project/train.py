@@ -12,6 +12,7 @@ from pytorch_lightning.loggers import CSVLogger, WandbLogger
 import wandb
 from mlops_project.dataloader import create_dataloaders, set_seed, subsample_dataloader
 from mlops_project.model import BaselineCNN, EfficientNet, ResNet
+from mlops_project.profiler import ProfilerCallback
 from mlops_project.subsample import subsample_dataset
 
 if TYPE_CHECKING:
@@ -29,6 +30,9 @@ def train_model(
     patience: int = 7,
     output_dir: str = "models",
     wandb_logger: WandbLogger | None = None,
+    enable_profiler: bool = False,
+    profiler_dir: str = "profiler_logs",
+    cfg: DictConfig | None = None,
 ) -> tuple[pl.LightningModule, dict]:
     """Train a given model and return the trained model and training metrics."""
     # Troubleshooting purposes - training slower on cpu
@@ -59,13 +63,33 @@ def train_model(
         loggers.append(wandb_logger)
 
     # train model
-    trainer = pl.Trainer(
-        max_epochs=epochs,
-        accelerator="auto",
-        devices="auto",
-        logger=loggers,
-        callbacks=[early_stopping, checkpoint_callback],
-    )
+    trainer_kwargs = {
+        "max_epochs": epochs,
+        "accelerator": "auto",
+        "devices": "auto",
+        "logger": loggers,
+        "callbacks": [early_stopping, checkpoint_callback],
+    }
+
+    # Add profiler if enabled
+    if enable_profiler:
+        profiler_dir_path = Path(profiler_dir) / model_name
+        profiler_dir_path.mkdir(parents=True, exist_ok=True)
+
+        # Use PyTorch Lightning's built-in profiler for basic info
+        trainer_kwargs["profiler"] = "simple"
+
+        # Add profiler callback for detailed PyTorch profiling
+        profiler_callback = ProfilerCallback(
+            output_dir=str(profiler_dir_path),
+            schedule_every_n_steps=cfg.get("profiling", {}).get("schedule_every_n_steps", 50) if cfg else 50,
+            warmup_steps=cfg.get("profiling", {}).get("warmup_steps", 1) if cfg else 1,
+            active_steps=cfg.get("profiling", {}).get("active_steps", 3) if cfg else 3,
+            repeat_cycles=cfg.get("profiling", {}).get("repeat_cycles", 2) if cfg else 2,
+        )
+        trainer_kwargs["callbacks"].append(profiler_callback)
+
+    trainer = pl.Trainer(**trainer_kwargs)
 
     print(f"Training {model_name}...")
     trainer.fit(model, train_loader, val_loader)
@@ -151,6 +175,10 @@ def train(cfg: DictConfig) -> None:
     output_dir = cfg.paths.output_dir
     subsample_percentage = cfg.data.subsample_percentage
 
+    # Profiler configuration
+    enable_profiler = cfg.get("profiling", {}).get("enabled", False)
+    profiler_dir = cfg.get("profiling", {}).get("output_dir", "profiler_logs")
+
     # Step 1: Load data (with optional subsampling)
     if subsample_percentage is not None:
         print(f"\n[1/5] Subsampling dataset ({subsample_percentage * 100:.1f}%)...")
@@ -222,6 +250,9 @@ def train(cfg: DictConfig) -> None:
 
     # Step 4: Train the model
     print("\n[4/5] Training model...")
+    if enable_profiler:
+        print(f"  Profiling enabled - logs will be saved to: {profiler_dir}/{model_name}")
+
     try:
         _, training_metrics = train_model(
             model=model,
@@ -232,6 +263,9 @@ def train(cfg: DictConfig) -> None:
             patience=cfg.training.patience,
             output_dir=output_dir,
             wandb_logger=wandb_logger,
+            enable_profiler=enable_profiler,
+            profiler_dir=profiler_dir,
+            cfg=cfg,
         )
     except Exception as e:  # noqa: BLE001
         print(f"  ERROR: Failed to train {model_name}: {str(e)}")
