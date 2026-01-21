@@ -1,4 +1,6 @@
 [core]
-    remote = gcs_remote
-['remote "gcs_remote"']
+    remote = gcs_data_remote
+['remote "gcs_data_remote"']
     url = gs://skin_cancer_data_set
+['remote "gcs_models_remote"']
+    url = gs://vibeops-models
