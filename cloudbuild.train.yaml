@@ -3,6 +3,8 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
+      - '--platform'
+      - 'linux/amd64'
       - '-f'
       - 'dockerfiles/train.dockerfile'
       - '-t'

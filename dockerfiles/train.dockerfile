@@ -12,10 +12,12 @@ COPY README.md README.md
 COPY src src/
 COPY configs configs/
 
-# 3. Copy DVC configuration files for data access from GCS
+# 3. Copy DVC configuration files for data access from GCS and model tracking
+# Only copy config, not the cache (cache is huge and not needed in image)
 COPY .dvc/config .dvc/config
 COPY data.dvc data.dvc
 COPY raw.dvc raw.dvc
+COPY models.dvc models.dvc
 
 # 4. Copy entrypoint script
 COPY scripts/entrypoint.sh /entrypoint.sh
