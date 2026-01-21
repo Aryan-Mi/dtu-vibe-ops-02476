@@ -65,7 +65,7 @@ echo "Enabling versioning on bucket..."
 gsutil versioning set on "gs://$BUCKET_NAME"
 echo "Versioning enabled"
 
-# Set lifecycle policy (optional - keep all versions for 30 days)
+# Set lifecycle policy
 echo ""
 echo "Setting lifecycle policy..."
 cat > /tmp/lifecycle.json <<EOF

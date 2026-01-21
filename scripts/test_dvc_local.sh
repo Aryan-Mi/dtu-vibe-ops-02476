@@ -9,7 +9,6 @@
 
 set -e
 
-# Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
@@ -43,7 +42,6 @@ echo "DVC Model Tracking Test (Local)"
 echo "==========================================${NC}"
 echo ""
 
-# Step 1: Create test model if requested
 if [ "$CREATE_TEST_MODEL" = true ]; then
     echo -e "${BLUE}[1/4] Creating test model file...${NC}"
     mkdir -p models/test_model
@@ -53,7 +51,6 @@ if [ "$CREATE_TEST_MODEL" = true ]; then
     echo ""
 fi
 
-# Step 2: Check if models directory exists
 if [ ! -d "models" ] || [ -z "$(ls -A models 2>/dev/null)" ]; then
     echo -e "${RED}✗ Error: models/ directory is empty or doesn't exist${NC}"
     echo ""
@@ -69,7 +66,6 @@ echo "  Models found:"
 find models -type f | head -10
 echo ""
 
-# Step 3: Add models to DVC
 echo -e "${BLUE}[2/4] Adding models to DVC...${NC}"
 
 # Check if models.dvc exists
@@ -92,7 +88,6 @@ else
     exit 1
 fi
 
-# Step 4: Show DVC status
 echo -e "${BLUE}[3/4] Checking DVC status...${NC}"
 echo "  DVC remotes configured:"
 uv run dvc remote list 2>/dev/null || echo "    (no remotes configured)"
@@ -108,7 +103,6 @@ else
 fi
 echo ""
 
-# Step 5: Push to GCS if requested
 if [ "$PUSH_TO_GCS" = true ]; then
     echo -e "${BLUE}[4/4] Pushing models to GCS...${NC}"
     echo "  Remote: gcs_models_remote (gs://vibeops-models)"

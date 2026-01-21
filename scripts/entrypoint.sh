@@ -51,8 +51,6 @@ echo "Starting training..."
 echo "=========================================="
 echo ""
 
-# Execute the training script with all passed arguments
-# Note: We don't use 'exec' here so we can run DVC operations after training
 uv run src/mlops_project/train.py "$@"
 TRAINING_EXIT_CODE=$?
 

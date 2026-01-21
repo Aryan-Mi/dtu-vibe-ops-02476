@@ -24,7 +24,7 @@ VAI_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 # Read access to data bucket
 gsutil iam ch serviceAccount:$VAI_SA:roles/storage.objectViewer gs://$DATA_BUCKET
 
-# Write access to models bucket (create bucket first if needed)
+# Write access to models bucket
 ./scripts/create_gcs_bucket.sh
 gsutil iam ch serviceAccount:$VAI_SA:roles/storage.objectAdmin gs://$MODELS_BUCKET
 

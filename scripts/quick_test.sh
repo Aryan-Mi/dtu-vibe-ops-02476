@@ -30,8 +30,6 @@ echo ""
 echo "Training args: ${TRAINING_ARGS[*]}"
 echo ""
 
-# Build image locally (no push)
-# Note: Building for linux/amd64 for compatibility
 echo "[1/3] Building Docker image..."
 docker build . \
     --file dockerfiles/train.dockerfile \

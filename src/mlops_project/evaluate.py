@@ -24,7 +24,6 @@ def evaluate(
 ) -> None:
     """Evaluate a trained model on the test set and print accuracy."""
     try:
-        # 0. Initialize config
         default_config = {
             "BaselineCNN": {
                 "num_classes": 2,
@@ -58,7 +57,6 @@ def evaluate(
         if model_config:
             config.update(model_config)
 
-        # 1. Initialize model based on config
         if model_name == "EfficientNet":
             model = EfficientNet(**config)
         elif model_name == "BaselineCNN":
@@ -71,7 +69,6 @@ def evaluate(
 
         model.load_state_dict(torch.load(model_checkpoint, map_location=DEVICE))
 
-        # 2. Get test loader
         _, _, test_dataloader = create_dataloaders(
             data_path=data_path,
             image_size=image_size,
@@ -83,7 +80,6 @@ def evaluate(
             random_seed=random_seed,
         )
 
-        # 3. Predict with Lightning Trainer and compute accuracy
         accelerator = "gpu" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
         logger = WandbLogger(project="mlops-project", log_model=False)
 

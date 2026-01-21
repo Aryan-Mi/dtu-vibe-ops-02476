@@ -51,8 +51,6 @@ def upload_to_gcs(local_path: str | Path, gcs_bucket: str, gcs_path: str) -> str
         return None
 
 
-# Train models written in model.py and store results for comparison and selection of best model.
-# pytorch lightning reference source: https://lightning.ai/pages/community/tutorial/step-by-step-walk-through-of-pytorch-lightning/
 def train_model(
     model: pl.LightningModule,
     model_name: str,
@@ -64,7 +62,6 @@ def train_model(
     wandb_logger: WandbLogger | None = None,
 ) -> tuple[pl.LightningModule, dict]:
     """Train a given model and return the trained model and training metrics."""
-    # Troubleshooting purposes - training slower on cpu
     print(f"CUDA available: {torch.cuda.is_available()}")
     print(f"Device: {torch.device('cuda' if torch.cuda.is_available() else 'cpu')}")
 
@@ -75,8 +72,6 @@ def train_model(
     # stop training model when it stops improving
     early_stopping = EarlyStopping("val_loss", patience=patience)
 
-    # model checkpoint for saving epoch results during training
-    # For picking the best model and also troubleshooting :)
     checkpoint_callback = ModelCheckpoint(
         dirpath=output_path,
         filename=f"{model_name}-{{epoch:02d}}-{{val_loss:.4f}}",
@@ -91,7 +86,6 @@ def train_model(
     if wandb_logger is not None:
         loggers.append(wandb_logger)
 
-    # train model
     trainer = pl.Trainer(
         max_epochs=epochs,
         accelerator="auto",
@@ -394,18 +388,14 @@ def train(cfg: DictConfig) -> None:
     subsample_percentage = cfg.data.subsample_percentage
     use_wandb = cfg.get("wandb", {}).get("enabled", False)
 
-    # Step 1: Load data (with optional subsampling)
     train_loader, val_loader, test_loader = load_data(cfg)
 
-    # Step 2: Define model to train
     print(f"\n[2/5] Initializing {model_name}...")
     model = create_model(cfg)
     print_model_info(model_name, cfg)
 
-    # Step 3: Initialize W&B logger (if enabled)
     wandb_logger = setup_wandb_logger(cfg, model_name, subsample_percentage)
 
-    # Step 4: Train the model
     print("\n[4/5] Training model...")
     try:
         _, training_metrics = train_model(
@@ -424,7 +414,6 @@ def train(cfg: DictConfig) -> None:
             wandb.finish()
         return
 
-    # Step 5: Save results
     print("\n[5/5] Saving results...")
     print("\n" + "=" * 80)
     print("TRAINING SUMMARY")

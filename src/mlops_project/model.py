@@ -13,8 +13,6 @@ from torchvision.models import (
     EfficientNet_B7_Weights,
 )
 
-# 0. Mapping of EfficientNet versions to their input sizes
-# Credits to : https://www.kaggle.com/code/carlolepelaars/efficientnetb5-with-keras-aptos-2019 for the recommended size
 INPUT_SIZE = {
     "b0": 224,
     "b1": 240,
@@ -27,7 +25,6 @@ INPUT_SIZE = {
 }
 
 
-# 1. Baseline CNN Model
 class ConvBlock(nn.Module):
     """Building blocks for the baseline CNN model."""
 
@@ -64,14 +61,12 @@ class BaselineCNN(pl.LightningModule):
             output_channels = [8, 16, 32]
         super().__init__()
 
-        # 1. Stack Conv Blocks
         layers: list[nn.Module] = []
         cin = input_channel
         for cout in output_channels:
             layers.append(ConvBlock(cin, cout, use_bn))
             cin = cout
 
-        # 2. Final Classifier
         layers.append(nn.Flatten())
         layers.append(
             nn.Linear(
@@ -86,11 +81,9 @@ class BaselineCNN(pl.LightningModule):
 
         self.model = nn.Sequential(*layers)
 
-        # 3. Store input parameters for validation
         self.input_dim = input_dim
         self.input_channel = input_channel
 
-        # 4. Loss function & learning rate
         self.criterion = nn.CrossEntropyLoss()
         self.lr = lr
 
@@ -116,7 +109,7 @@ class BaselineCNN(pl.LightningModule):
             )
             raise ValueError(msg)
 
-        return self.model(x)  # Returns the logits.
+        return self.model(x)
 
     def training_step(self, batch: tuple, batch_idx):
         """Training step for the BaselineCNN model."""
@@ -127,7 +120,6 @@ class BaselineCNN(pl.LightningModule):
         pred = logits.argmax(dim=-1)
         acc = (target == pred).float().mean()
 
-        # Logging to wandb
         self.log("train_loss", loss)
         self.log("train_acc", acc)
 
@@ -142,7 +134,6 @@ class BaselineCNN(pl.LightningModule):
         pred = logits.argmax(dim=-1)
         acc = (target == pred).float().mean()
 
-        # on_epoch=True to log epoch-level metrics
         self.log("val_loss", loss, on_epoch=True)
         self.log("val_acc", acc, on_epoch=True)
 
@@ -150,11 +141,7 @@ class BaselineCNN(pl.LightningModule):
         self, batch: tuple[Tensor, Tensor] | Tensor, batch_idx: int, dataloader_idx: int = 0
     ) -> torch.Tensor:
         """Prediction step for the BaselineCNN model."""
-        # batch is (images, labels) from the DataLoader
-        # We only need the images for prediction
         x = batch[0] if isinstance(batch, list | tuple) else batch
-
-        # return self(x)  # returns logits
 
         logits = self(x)
         probs = torch.softmax(logits, dim=-1)
@@ -165,18 +152,15 @@ class BaselineCNN(pl.LightningModule):
         return torch.optim.Adam(self.parameters(), lr=self.lr)
 
 
-# 2. ResNet Model
 class ResidualBlock(nn.Module):
     """ResNet Residual Block. Credits to : https://d2l.ai/chapter_convolutional-modern/resnet.html."""
 
     def __init__(self, in_ch: int, out_ch: int, stride: int = 1, use_bn: bool = True):
         super().__init__()
 
-        # 1. Define helper
         def bn(c):
             return nn.BatchNorm2d(c) if use_bn else nn.Identity()
 
-        # 2. Define branches / layers
         branch_layers: list[nn.Module] = [nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1, stride=stride)]
         branch_layers.append(bn(out_ch))
         branch_layers.append(nn.ReLU())
@@ -229,7 +213,6 @@ class ResNet(pl.LightningModule):
 
         super().__init__()
 
-        # 1. Initial Layers
         layers = [
             nn.Conv2d(input_channel, base_channel, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(base_channel) if use_bn else nn.Identity(),
@@ -237,32 +220,26 @@ class ResNet(pl.LightningModule):
             nn.MaxPool2d(kernel_size=2, stride=2),
         ]
 
-        # 2. Stack Residual Blocks
         in_ch = base_channel
         for cout, stride in zip(output_channels, strides):
             layers.append(ResidualBlock(in_ch, cout, stride=stride, use_bn=use_bn))
             in_ch = cout
 
-        # 3. Final Classifier
-        layers.append(nn.AdaptiveAvgPool2d(1))  # Global average pooling. Will output (batch_size, channels, 1, 1)
+        layers.append(nn.AdaptiveAvgPool2d(1))
         layers.append(nn.Flatten())
         layers.append(nn.Dropout(dropout) if dropout and dropout > 0 else nn.Identity())
         layers.append(nn.Linear(output_channels[-1], num_classes))
 
         self.net = nn.Sequential(*layers)
 
-        # Store input parameters for validation (loaded from config)
         self.input_channel = input_channel
-        self.input_dim = input_dim  # None means no spatial validation (flexible due to AdaptiveAvgPool2d)
+        self.input_dim = input_dim
 
-        # 3. Loss function & learning rate
         self.criterion = nn.CrossEntropyLoss()
         self.lr = lr
 
     def forward(self, x):
         """Forward pass of the ResNet model."""
-        # Input validation (all values loaded from model config)
-        # Note: ndim==4 is hardcoded because 2D CNNs always expect [batch, channels, height, width]
         if x.ndim != 4:
             msg = f"Expected input to be a 4D tensor [batch, channels, height, width], got {x.ndim}D tensor"
             raise ValueError(msg)
@@ -273,8 +250,6 @@ class ResNet(pl.LightningModule):
                 f"Input shape: {x.shape}"
             )
             raise ValueError(msg)
-        # Optional spatial dimension validation (from config: input_dim, if provided)
-        # ResNet uses AdaptiveAvgPool2d so spatial size is flexible unless input_dim is set
         if self.input_dim is not None and (x.shape[2] != self.input_dim or x.shape[3] != self.input_dim):
             msg = (
                 f"Expected input spatial size to be [{self.input_dim}, {self.input_dim}], "
@@ -293,7 +268,6 @@ class ResNet(pl.LightningModule):
         pred = logits.argmax(dim=-1)
         acc = (target == pred).float().mean()
 
-        # Logging to wandb
         self.log("train_loss", loss)
         self.log("train_acc", acc)
 
@@ -308,7 +282,6 @@ class ResNet(pl.LightningModule):
         pred = logits.argmax(dim=-1)
         acc = (target == pred).float().mean()
 
-        # on_epoch=True to log epoch-level metrics
         self.log("val_loss", loss, on_epoch=True)
         self.log("val_acc", acc, on_epoch=True)
 
@@ -316,12 +289,7 @@ class ResNet(pl.LightningModule):
         self, batch: tuple[Tensor, Tensor] | Tensor, batch_idx: int, dataloader_idx: int = 0
     ) -> torch.Tensor:
         """Prediction step for the ResNet model."""
-        # batch is (images, labels) from the DataLoader
-        # We only need the images for prediction
-
         x = batch[0] if isinstance(batch, list | tuple) else batch
-
-        # return self(x)  # returns logits
 
         logits = self(x)
         probs = torch.softmax(logits, dim=-1)
@@ -332,7 +300,6 @@ class ResNet(pl.LightningModule):
         return torch.optim.Adam(self.parameters(), lr=self.lr)
 
 
-# 3. EfficientNet Wrapper Model
 class EfficientNet(pl.LightningModule):
     """EfficientNet model from torchvision. Based on this paper: https://arxiv.org/abs/1905.11946."""
 
@@ -347,7 +314,6 @@ class EfficientNet(pl.LightningModule):
     ):
         super().__init__()
 
-        # 0 . Define helper
         def disable_bn_layers(module):
             for name, child in module.named_children():
                 if isinstance(child, nn.BatchNorm2d):
@@ -355,7 +321,6 @@ class EfficientNet(pl.LightningModule):
 
                 disable_bn_layers(child)
 
-        # 1. Load EfficientNet Backbone (and pretrained weights if specified)
         efficientnet_configs = {
             "b0": (models.efficientnet_b0, EfficientNet_B0_Weights),
             "b1": (models.efficientnet_b1, EfficientNet_B1_Weights),
@@ -370,41 +335,33 @@ class EfficientNet(pl.LightningModule):
             msg = f"Unsupported size: {model_size}"
             raise ValueError(msg)
 
-        self.model_size = model_size  # for input validation
+        self.model_size = model_size
         self.model = efficientnet_configs[model_size][0](
             weights=efficientnet_configs[model_size][1].DEFAULT if pretrained else None
-        )  # Load pretrained weights if specified
+        )
 
-        # 2. Freeze backbone layers if needed
         if freeze_backbone:
             for param in self.model.features.parameters():
                 param.requires_grad = False
 
-        # 3. Modify the classifier to match num_classes
         in_features = self.model.classifier[1].in_features
         self.model.classifier[1] = nn.Linear(in_features, num_classes)
 
-        # 4. Remove BatchNorm layers if needed.
         if not use_bn:
             disable_bn_layers(self.model)
 
-        # 5. Loss function & learning rate
         self.criterion = nn.CrossEntropyLoss()
         self.lr = lr
 
     def forward(self, x):
         """Forward pass of the EfficientNet model."""
-        # Input validation (all values loaded from model config)
-        # ndim==4 because 2D CNNs always expect [batch, channels, height, width]
         if x.ndim != 4:
             msg = f"Expected input to be a 4D tensor [batch, channels, height, width], got {x.ndim}D tensor"
             raise ValueError(msg)
-        # Channel validation (EfficientNet always expects 3 RGB channels)
         if x.shape[1] != 3:
             msg = f"Expected input to have 3 channels (RGB), got {x.shape[1]} channels. Input shape: {x.shape}"
             raise ValueError(msg)
 
-        # Spatial dimension validation (from config: model_size -> INPUT_SIZE mapping)
         expected_size = INPUT_SIZE.get(self.model_size, 224)
         if x.shape[2] != expected_size or x.shape[3] != expected_size:
             import warnings
@@ -427,7 +384,6 @@ class EfficientNet(pl.LightningModule):
         pred = logits.argmax(dim=-1)
         acc = (target == pred).float().mean()
 
-        # Logging to wandb
         self.log("train_loss", loss)
         self.log("train_acc", acc)
 
@@ -442,7 +398,6 @@ class EfficientNet(pl.LightningModule):
         pred = logits.argmax(dim=-1)
         acc = (target == pred).float().mean()
 
-        # on_epoch=True to log epoch-level metrics
         self.log("val_loss", loss, on_epoch=True)
         self.log("val_acc", acc, on_epoch=True)
 
@@ -453,11 +408,7 @@ class EfficientNet(pl.LightningModule):
         dataloader_idx: int = 0,
     ) -> torch.Tensor:
         """Prediction step for the ResNet model."""
-        # batch is (images, labels) from the DataLoader
-        # We only need the images for prediction
         x = batch[0] if isinstance(batch, list | tuple) else batch
-
-        # return self(x)  # returns logits
 
         logits = self(x)
         probs = torch.softmax(logits, dim=-1)

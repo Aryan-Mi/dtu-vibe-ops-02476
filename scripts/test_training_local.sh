@@ -12,7 +12,6 @@
 
 set -e
 
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -91,7 +90,6 @@ echo "  Image Tag (Latest): $IMAGE_TAG_LATEST"
 echo "  Run Mode: $([ "$USE_VERTEX_AI" = true ] && echo "Vertex AI" || echo "Local Docker")"
 echo ""
 
-# Step 1: Authenticate to GCP
 echo -e "${BLUE}[1/5] Authenticating to Google Cloud...${NC}"
 if ! gcloud auth application-default print-access-token &>/dev/null; then
     echo "  Setting up Application Default Credentials..."
@@ -104,7 +102,6 @@ fi
 echo "  Configuring Docker for Artifact Registry..."
 gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 
-# Step 2: Build Docker image
 echo ""
 echo -e "${BLUE}[2/5] Building Docker image for linux/amd64 (required for Vertex AI)...${NC}"
 docker build . \
@@ -121,7 +118,6 @@ else
     exit 1
 fi
 
-# Step 3: Push to Artifact Registry
 echo ""
 echo -e "${BLUE}[3/5] Pushing image to Artifact Registry...${NC}"
 echo "  Pushing ${IMAGE_TAG_SHA}..."
@@ -137,7 +133,6 @@ else
     exit 1
 fi
 
-# Step 4: Run training
 echo ""
 if [ "$USE_VERTEX_AI" = true ]; then
     echo -e "${BLUE}[4/5] Submitting training job to Vertex AI...${NC}"
@@ -269,7 +264,6 @@ else
         exit 1
     fi
     
-    # Step 5: Verify DVC model tracking
     echo ""
     echo -e "${BLUE}[5/5] Verifying DVC model tracking...${NC}"
     
