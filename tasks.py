@@ -64,14 +64,14 @@ def create_demo_model(ctx: Context) -> None:
 def deploy_to_cloud_run(ctx: Context, project_id: str, region: str = "europe-west1") -> None:
     """Deploy API to Google Cloud Run."""
     print(f"Deploying to project: {project_id}, region: {region}")
-    
+
     # Tag locally
     image_name = f"gcr.io/{project_id}/skin-lesion-api:latest"
     ctx.run(f"docker build -t {image_name} -f dockerfiles/api.dockerfile .", echo=True, pty=not WINDOWS)
-    
+
     # Push to GCR
     ctx.run(f"docker push {image_name}", echo=True, pty=not WINDOWS)
-    
+
     # Deploy to Cloud Run
     ctx.run(
         f"gcloud run deploy skin-lesion-api "
@@ -80,5 +80,6 @@ def deploy_to_cloud_run(ctx: Context, project_id: str, region: str = "europe-wes
         f"--region {region} "
         f"--allow-unauthenticated "
         f"--port 8080",
-        echo=True, pty=not WINDOWS
+        echo=True,
+        pty=not WINDOWS,
     )
