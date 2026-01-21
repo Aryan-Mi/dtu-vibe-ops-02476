@@ -46,6 +46,15 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-groups
+          
       - name: Deploy to Cloud Run
         run: |
           uv run invoke deploy-to-cloud-run --project-id=${{ env.PROJECT_ID }} --region=${{ env.REGION }}
