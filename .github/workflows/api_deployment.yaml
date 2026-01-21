@@ -54,7 +54,11 @@ jobs:
       - name: Install dependencies
         run: |
           uv sync --all-groups
-          
+      
+      - name: DVC pull
+        run: |
+          uv run dvc pull
+
       - name: Deploy to Cloud Run
         run: |
           uv run invoke deploy-to-cloud-run --project-id=${{ env.PROJECT_ID }} --region=${{ env.REGION }}
