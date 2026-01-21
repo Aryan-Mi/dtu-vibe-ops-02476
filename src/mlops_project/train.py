@@ -10,7 +10,7 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import CSVLogger, WandbLogger
 
 import wandb
-from mlops_project.dataloader import create_dataloaders, set_seed, subsample_dataloader
+from mlops_project.dataloader import create_dataloaders, subsample_dataloader
 from mlops_project.model import INPUT_SIZE, BaselineCNN, EfficientNet, ResNet
 from mlops_project.subsample import subsample_dataset
 
