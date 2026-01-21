@@ -96,9 +96,9 @@ class TestAPIEndpoints:
         """Test prediction endpoint when model is not loaded."""
         response = client.post("/inference", files={"file": ("test.jpg", sample_image, "image/jpeg")})
 
-        assert response.status_code == 200
+        assert response.status_code == 503
         data = response.json()
-        assert data["error"] == "Model not loaded"
+        assert data["detail"] == "Model not loaded"
 
     @patch("mlops_project.api.model_session")
     def test_response_format_validation(self, mock_session, client, sample_image):

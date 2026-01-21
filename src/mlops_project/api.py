@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import onnxruntime as ort
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from hydra import compose, initialize_config_dir
 from PIL import Image
 from pydantic import BaseModel
@@ -84,7 +84,7 @@ async def perform_inference(file: UploadFile = File(...)):
         Dictionary with predicted class, diagnosis name, and probabilities
     """
     if model_session is None:
-        return {"error": "Model not loaded"}
+        raise HTTPException(status_code=503, detail="Model not loaded")
 
     i_image = Image.open(file.file)
     if i_image.mode != "RGB":
