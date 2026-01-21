@@ -440,7 +440,7 @@ def train(cfg: DictConfig) -> None:
     # Export the trained model to ONNX format
     onnx_model_path = export_model_to_onnx(model, checkpoint_path, image_size)
 
-    # Save training results first (needed for GCS upload)
+    # Save training results (models will be tracked with DVC after training)
     results_path = save_training_results(
         cfg=cfg,
         model_name=model_name,
@@ -453,39 +453,10 @@ def train(cfg: DictConfig) -> None:
         output_dir=output_dir,
     )
 
-    # Upload models to GCS if configured
-    gcs_bucket = cfg.paths.get("gcs_bucket") or os.getenv("GCS_MODELS_BUCKET")
-    checkpoint_gcs_path = None
-    onnx_gcs_path = None
-    results_gcs_path = None
-
-    if gcs_bucket:
-        checkpoint_gcs_path, onnx_gcs_path, results_gcs_path = upload_models_to_gcs(
-            gcs_bucket, model_name, checkpoint_path, onnx_model_path, results_path
-        )
-        # Update results file with GCS paths
-        save_training_results(
-            cfg=cfg,
-            model_name=model_name,
-            training_metrics=training_metrics,
-            checkpoint_path=checkpoint_path,
-            onnx_model_path=onnx_model_path,
-            checkpoint_gcs_path=checkpoint_gcs_path,
-            onnx_gcs_path=onnx_gcs_path,
-            results_gcs_path=results_gcs_path,
-            output_dir=output_dir,
-        )
-    else:
-        print("\n⚠ GCS bucket not configured, models saved locally only")
-        print("  Set paths.gcs_bucket in config or GCS_MODELS_BUCKET env var to enable GCS upload")
-
-    print(f"\nResults saved to: {results_path}")
-    print(f"Model checkpoint: {training_metrics['checkpoint_path']}")
-    print(f"ONNX model exported to: {onnx_model_path}")
-    if checkpoint_gcs_path:
-        print(f"Checkpoint uploaded to: {checkpoint_gcs_path}")
-    if onnx_gcs_path:
-        print(f"ONNX model uploaded to: {onnx_gcs_path}")
+    print(f"\n✓ Results saved to: {results_path}")
+    print(f"✓ Model checkpoint: {training_metrics['checkpoint_path']}")
+    print(f"✓ ONNX model exported to: {onnx_model_path}")
+    print("\n📦 Models saved locally. They will be tracked with DVC and pushed to GCS by the entrypoint script.")
 
     # Finish W&B run
     if use_wandb:
