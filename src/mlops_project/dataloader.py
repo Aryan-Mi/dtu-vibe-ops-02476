@@ -47,7 +47,6 @@ def split_dataset_indices(
         Splits by lesion_id rather than image_id to prevent the same lesion
         from appearing in multiple splits (data leakage).
     """
-    # Set seed for reproducibility
     set_seed(random_seed)
 
     # Validate ratios
@@ -116,7 +115,6 @@ def create_dataloaders(
     Returns:
         Tuple of (train_loader, val_loader, test_loader)
     """
-    # Set global seed for reproducibility
     set_seed(random_seed)
 
     metadata_path = data_path + "/metadata" + "/HAM10000_metadata.csv"
@@ -160,7 +158,7 @@ def create_dataloaders(
         shuffle=True,
         num_workers=num_workers,
         generator=generator,
-        pin_memory=True,  # Faster GPU transfer
+        pin_memory=True,
     )
 
     val_loader = DataLoader(
@@ -182,9 +180,6 @@ def create_dataloaders(
     return train_loader, val_loader, test_loader
 
 
-# Copying dataloader function and modifying for subsample purposes here...
-# It may be more efficient long term to have the dataloader function take an input
-# variable representing subsampling (with 0 or 1 meaning no subsampling).
 def subsample_dataloader(
     data_path: str,
     subsample_result: dict,
@@ -268,7 +263,7 @@ def subsample_dataloader(
         shuffle=True,
         num_workers=num_workers,
         generator=generator,
-        pin_memory=True,  # Faster GPU transfer
+        pin_memory=True,
     )
 
     val_loader = DataLoader(

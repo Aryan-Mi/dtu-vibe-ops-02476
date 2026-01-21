@@ -1,0 +1,283 @@
+name: Train Model (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      preset:
+        description: 'Training preset configuration'
+        required: true
+        type: choice
+        options:
+          - quick-test
+          - full-baseline
+          - resnet-prod
+          - efficientnet-prod
+          - custom
+      model:
+        description: 'Model type (for custom preset)'
+        required: false
+        type: choice
+        options:
+          - BaselineCNN
+          - ResNet
+          - EfficientNet
+        default: 'BaselineCNN'
+      subsample_percentage:
+        description: 'Data subsample percentage (for custom preset, use null for full dataset)'
+        required: false
+        type: string
+        default: 'null'
+      max_epochs:
+        description: 'Maximum training epochs (for custom preset)'
+        required: false
+        type: number
+        default: 20
+      machine_type:
+        description: 'Vertex AI machine type'
+        required: true
+        type: choice
+        options:
+          - n1-standard-4
+          - n1-standard-8
+          - n1-highmem-4
+        default: 'n1-standard-4'
+      image_tag:
+        description: 'Docker image tag to use'
+        required: false
+        type: string
+        default: 'latest'
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'vibeops-483814' }}
+  REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
+  ARTIFACT_REGISTRY: ${{ vars.GCP_ARTIFACT_REGISTRY || 'dtu-vibe-ops' }}
+  GCS_MODELS_BUCKET: ${{ vars.GCS_MODELS_BUCKET || 'vibeops-models' }}
+
+jobs:
+  submit-training-job:
+    name: Submit Training Job to Vertex AI
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          create_credentials_file: true
+          export_environment_variables: true
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Generate training configuration
+        id: config
+        run: |
+          PRESET="${{ inputs.preset }}"
+          MODEL="${{ inputs.model }}"
+          SUBSAMPLE="${{ inputs.subsample_percentage }}"
+          MAX_EPOCHS="${{ inputs.max_epochs }}"
+          MACHINE_TYPE="${{ inputs.machine_type }}"
+          IMAGE_TAG="${{ inputs.image_tag }}"
+          
+          # Build image URI
+          IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/dtu-vibe-ops-02476-train:${IMAGE_TAG}"
+          
+          # Initialize args array
+          ARGS=()
+          WANDB_ENABLED="false"
+          
+          # Check if WANDB_API_KEY secret exists
+          if [ -n "${{ secrets.WANDB_API_KEY }}" ]; then
+            WANDB_ENABLED="true"
+          fi
+          
+          # Set configuration based on preset
+          case "$PRESET" in
+            quick-test)
+              ARGS+=("model=baseline_cnn")
+              ARGS+=("data.subsample_percentage=0.01")
+              ARGS+=("training.max_epochs=2")
+              ARGS+=("wandb.enabled=false")
+              ;;
+            full-baseline)
+              ARGS+=("model=baseline_cnn")
+              ARGS+=("data.subsample_percentage=null")
+              ARGS+=("training.max_epochs=20")
+              if [ "$WANDB_ENABLED" = "true" ]; then
+                ARGS+=("wandb.enabled=true")
+              else
+                ARGS+=("wandb.enabled=false")
+              fi
+              ;;
+            resnet-prod)
+              ARGS+=("model=resnet")
+              ARGS+=("data.subsample_percentage=null")
+              ARGS+=("training.max_epochs=20")
+              if [ "$WANDB_ENABLED" = "true" ]; then
+                ARGS+=("wandb.enabled=true")
+              else
+                ARGS+=("wandb.enabled=false")
+              fi
+              ;;
+            efficientnet-prod)
+              ARGS+=("model=efficientnet")
+              ARGS+=("data.subsample_percentage=null")
+              ARGS+=("training.max_epochs=20")
+              ARGS+=("model.pretrained=true")
+              if [ "$WANDB_ENABLED" = "true" ]; then
+                ARGS+=("wandb.enabled=true")
+              else
+                ARGS+=("wandb.enabled=false")
+              fi
+              ;;
+            custom)
+              # Map model name to config file name
+              case "$MODEL" in
+                BaselineCNN)
+                  ARGS+=("model=baseline_cnn")
+                  ;;
+                ResNet)
+                  ARGS+=("model=resnet")
+                  ;;
+                EfficientNet)
+                  ARGS+=("model=efficientnet")
+                  ;;
+              esac
+              
+              if [ "$SUBSAMPLE" != "null" ] && [ -n "$SUBSAMPLE" ]; then
+                ARGS+=("data.subsample_percentage=${SUBSAMPLE}")
+              else
+                ARGS+=("data.subsample_percentage=null")
+              fi
+              
+              ARGS+=("training.max_epochs=${MAX_EPOCHS}")
+              
+              if [ "$WANDB_ENABLED" = "true" ]; then
+                ARGS+=("wandb.enabled=true")
+              else
+                ARGS+=("wandb.enabled=false")
+              fi
+              ;;
+          esac
+          
+          # Convert args array to YAML format
+          ARGS_YAML=""
+          for arg in "${ARGS[@]}"; do
+            ARGS_YAML="${ARGS_YAML}        - ${arg}"$'\n'
+          done
+          
+          # Create job config YAML
+          cat > /tmp/job-config.yaml << EOF
+          workerPoolSpecs:
+            - machineSpec:
+                machineType: ${MACHINE_TYPE}
+              replicaCount: 1
+              containerSpec:
+                imageUri: ${IMAGE_URI}
+                env:
+          EOF
+          
+          # Add WANDB_API_KEY if available
+          if [ "$WANDB_ENABLED" = "true" ]; then
+            echo "                  - name: WANDB_API_KEY" >> /tmp/job-config.yaml
+            echo "                    value: \"${{ secrets.WANDB_API_KEY }}\"" >> /tmp/job-config.yaml
+          fi
+          
+          # Add args section
+          cat >> /tmp/job-config.yaml << EOF
+                args:
+          ${ARGS_YAML}
+          EOF
+          
+          # Output configuration for summary
+          echo "config-file=/tmp/job-config.yaml" >> $GITHUB_OUTPUT
+          echo "image-uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
+          echo "args=${ARGS[*]}" >> $GITHUB_OUTPUT
+          echo "wandb-enabled=${WANDB_ENABLED}" >> $GITHUB_OUTPUT
+          
+          # Display configuration
+          echo "Generated Training Configuration:"
+          echo "  Preset: ${PRESET}"
+          echo "  Image URI: ${IMAGE_URI}"
+          echo "  Machine Type: ${MACHINE_TYPE}"
+          echo "  W&B Enabled: ${WANDB_ENABLED}"
+          echo "  Args: ${ARGS[*]}"
+          echo ""
+          echo "Job Config:"
+          cat /tmp/job-config.yaml
+
+      - name: Submit training job to Vertex AI
+        id: submit-job
+        run: |
+          JOB_NAME="dtu-vibe-ops-training-$(date +%Y%m%d-%H%M%S)"
+          
+          echo "Submitting training job: ${JOB_NAME}"
+          
+          JOB_OUTPUT=$(gcloud ai custom-jobs create \
+            --project="${PROJECT_ID}" \
+            --region="${REGION}" \
+            --display-name="${JOB_NAME}" \
+            --config=/tmp/job-config.yaml \
+            2>&1)
+          
+          echo "Job submission output:"
+          echo "$JOB_OUTPUT"
+          
+          # Extract job ID from output
+          JOB_ID=$(echo "$JOB_OUTPUT" | grep -oP 'customJobs/\K[0-9]+' || echo "")
+          
+          if [ -n "$JOB_ID" ]; then
+            echo "job-id=${JOB_ID}" >> $GITHUB_OUTPUT
+            echo "job-name=${JOB_NAME}" >> $GITHUB_OUTPUT
+            echo "✓ Job submitted successfully!"
+          else
+            echo "✗ Failed to extract job ID"
+            echo "$JOB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Create job summary
+        run: |
+          echo "## 🚀 Training Job Submitted Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Job Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Job Name**: \`${{ steps.submit-job.outputs.job-name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Job ID**: \`${{ steps.submit-job.outputs.job-id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image URI**: \`${{ steps.config.outputs.image-uri }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Machine Type**: \`${{ inputs.machine_type }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Preset**: \`${{ inputs.preset }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **W&B Logging**: \`${{ steps.config.outputs.wandb-enabled }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Training Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.config.outputs.args }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Monitor Training" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**View in Console:**" >> $GITHUB_STEP_SUMMARY
+          echo "[Open Vertex AI Console](https://console.cloud.google.com/vertex-ai/training/custom-jobs/${{ steps.submit-job.outputs.job-id }}?project=${PROJECT_ID})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Stream Logs:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "gcloud ai custom-jobs stream-logs projects/${PROJECT_ID}/locations/${REGION}/customJobs/${{ steps.submit-job.outputs.job-id }} --region=${REGION}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Describe Job:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "gcloud ai custom-jobs describe projects/${PROJECT_ID}/locations/${REGION}/customJobs/${{ steps.submit-job.outputs.job-id }} --region=${REGION}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Expected Outputs" >> $GITHUB_STEP_SUMMARY
+          echo "- **Models**: Trained models will be tracked with DVC and pushed to \`gs://${GCS_MODELS_BUCKET}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Checkpoints**: Model checkpoints saved in \`models/\` directory" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.config.outputs.wandb-enabled }}" = "true" ]; then
+            echo "- **W&B Logs**: View training metrics at [Weights & Biases](https://wandb.ai)" >> $GITHUB_STEP_SUMMARY
+          fi
