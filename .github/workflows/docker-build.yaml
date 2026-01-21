@@ -2,9 +2,11 @@ name: Build and Push Docker Images to Artifact Registry
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 env:
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'vibeops-483814' }}
