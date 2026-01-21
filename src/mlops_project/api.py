@@ -1,4 +1,3 @@
-# bump
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
