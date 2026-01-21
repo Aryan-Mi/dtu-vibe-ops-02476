@@ -1,12 +1,13 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Dict, cast
 
 import numpy as np
 import onnxruntime as ort
 from fastapi import FastAPI, File, UploadFile
 from hydra import compose, initialize_config_dir
 from PIL import Image
+from pydantic import BaseModel
 
 from mlops_project.data import CLASS_TO_DX, get_transforms
 
@@ -50,6 +51,14 @@ async def lifespan(app: FastAPI):
     del model_session, runtime_config
 
 
+class PredictionResponse(BaseModel):
+    predicted_class: int
+    diagnosis: str
+    confidence: float
+    is_cancer: bool
+    probabilities: Dict[str, float]
+
+
 app = FastAPI(lifespan=lifespan)
 
 
@@ -61,7 +70,7 @@ def read_root():
     return {"message": "Skin Lesion Classification API", "status": "ready"}
 
 
-@app.post("/inference")
+@app.post("/inference", response_model=PredictionResponse)
 async def perform_inference(file: UploadFile = File(...)):
     """
     Perform inference on an uploaded image.
