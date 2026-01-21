@@ -157,12 +157,12 @@ def create_model(cfg: DictConfig) -> pl.LightningModule:
 
 def initialize_wandb_logger(cfg: DictConfig, model_name: str, subsample_percentage: float | None) -> WandbLogger | None:
     """Initialize W&B logger if enabled in config.
-    
+
     Args:
         cfg: Hydra configuration object
         model_name: Name of the model being trained
         subsample_percentage: Percentage of data subsampled (or None for full dataset)
-        
+
     Returns:
         WandbLogger instance if enabled, None otherwise
     """
@@ -182,7 +182,7 @@ def initialize_wandb_logger(cfg: DictConfig, model_name: str, subsample_percenta
         )
         print(f"  W&B logging enabled: {wandb_cfg.get('project')}/{run_name}")
         return wandb_logger
-    
+
     print("\n[3/5] W&B logging disabled")
     return None
 
@@ -207,7 +207,7 @@ def train_with_cfg(cfg: DictConfig) -> None:
         else:
             msg = f"Unknown EfficientNet model size '{model_size}'"
             raise ValueError(msg)
-        
+
     # Print resolved configuration
     print("=" * 80)
     print("SKIN LESION CLASSIFICATION - MODEL TRAINING")
@@ -458,7 +458,7 @@ def print_model_info(model_name: str, cfg: DictConfig) -> None:
 @hydra.main(version_base=None, config_path="../../configs", config_name="config")
 def train(cfg: DictConfig) -> None:
     """Train specified model on skin lesion dataset with Hydra configuration and W&B logging.
-    
+
     Supports both normal training runs and W&B sweeps.
 
     Args:
@@ -468,7 +468,7 @@ def train(cfg: DictConfig) -> None:
     if wandb.run is not None and wandb.run.sweep_id is not None:
         # Update config with sweep parameters from wandb
         cfg = OmegaConf.merge(cfg, OmegaConf.create(dict(wandb.config)))
-    
+
     train_with_cfg(cfg)
 
 
