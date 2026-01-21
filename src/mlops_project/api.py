@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import onnxruntime as ort
@@ -52,11 +52,13 @@ async def lifespan(app: FastAPI):
 
 
 class PredictionResponse(BaseModel):
+    """Response model for predictions."""
+
     predicted_class: int
     diagnosis: str
     confidence: float
     is_cancer: bool
-    probabilities: Dict[str, float]
+    probabilities: dict[str, float]
 
 
 app = FastAPI(lifespan=lifespan)
