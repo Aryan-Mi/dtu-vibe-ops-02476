@@ -33,10 +33,10 @@ profiling:
   output_dir: "outputs/profiler_logs"  # Directory for profiler outputs
   # Advanced profiler settings (if needed)
   schedule_every_n_steps: 50   # Profile every N steps
-  wait_steps: 1                # Warm-up steps before profiling starts
-  warmup_steps: 1               # Warm-up steps for each profiling cycle
-  active_steps: 3               # Number of active profiling steps per cycle
-  repeat_cycles: 2              # Number of profiling cycles
+  wait_steps: 5                # Warm-up steps before profiling starts (increased to reduce file handles)
+  warmup_steps: 2              # Warm-up steps for each profiling cycle (increased)
+  active_steps: 2              # Number of active profiling steps per cycle (reduced to save resources)
+  repeat_cycles: 1             # Number of profiling cycles (reduced to 1 to avoid too many files)
 
 # Paths
 paths:
