@@ -48,4 +48,4 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          invoke deploy-to-cloud-run --project-id=${{ env.PROJECT_ID }} --region=${{ env.REGION }}
+          uv run invoke deploy-to-cloud-run --project-id=${{ env.PROJECT_ID }} --region=${{ env.REGION }}
