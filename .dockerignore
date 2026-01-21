@@ -1,0 +1,50 @@
+# DVC cache (huge, don't copy to Docker - data will be pulled via DVC)
+.dvc/cache/
+.dvc/tmp/
+
+# Data directories (will be pulled via DVC at runtime)
+data/
+models/
+outputs/
+logs/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Git (not needed in container)
+.git/
+.gitignore
+
+# Documentation build
+docs/site/
+htmlcov/
+
+# Test files
+.pytest_cache/
+.coverage
+*.cover
+
+# HPC outputs
+gpu_*.err
+gpu_*.out
+
+# Temporary files
+*.swp
+*.swo
+*~

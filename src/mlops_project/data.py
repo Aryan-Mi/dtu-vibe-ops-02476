@@ -9,7 +9,6 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 from torchvision.transforms import InterpolationMode
 
-# Mapping of diagnosis codes to class indices
 DX_TO_CLASS = {
     "nv": 0,  # Melanocytic nevi
     "mel": 1,  # Melanoma - CANCER
@@ -70,10 +69,8 @@ class CancerDataset(Dataset):
         image_path = self.images_path / f"{image_id}.jpg"
         image = Image.open(image_path).convert("RGB")
 
-        # Get label
         label = int(row["label"])
 
-        # Apply transforms
         image = self.transform(image) if self.transform else transforms.ToTensor()(image)
 
         return image, label

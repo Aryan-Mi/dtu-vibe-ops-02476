@@ -1,55 +1,191 @@
-name: Build and Push Docker Images
+name: Build and Push Docker Images to Artifact Registry
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'vibeops-483814' }}
+  REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
+  ARTIFACT_REGISTRY: ${{ vars.GCP_ARTIFACT_REGISTRY || 'dtu-vibe-ops' }}
 
 jobs:
   build-train:
     name: Build and Push Train Docker Image
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      image-uri-sha: ${{ steps.image-info.outputs.image-uri-sha }}
+      image-uri-latest: ${{ steps.image-info.outputs.image-uri-latest }}
+      commit-sha: ${{ github.sha }}
+      image-size: ${{ steps.image-info.outputs.image-size }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Build and push train image
-        run: |
-          echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login \
-            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
-          docker build . --file dockerfiles/train.dockerfile \
-            --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:${{ github.sha }} \
-            --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:latest
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          create_credentials_file: true
+          export_environment_variables: true
 
-      - name: Push Docker image
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${REGION}-docker.pkg.dev
+
+      - name: Build train image
+        id: build-train
+        run: |
+          export IMAGE_TAG=${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/dtu-vibe-ops-02476-train
+          docker build . --file dockerfiles/train.dockerfile \
+            --platform linux/amd64 \
+            --tag ${IMAGE_TAG}:${{ github.sha }} \
+            --tag ${IMAGE_TAG}:latest
+          
+          # Get image size
+          IMAGE_SIZE=$(docker images ${IMAGE_TAG}:latest --format "{{.Size}}")
+          echo "image-size=${IMAGE_SIZE}" >> $GITHUB_OUTPUT
+
+      - name: Push train image to Artifact Registry
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:${{ github.sha }}
-          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-train:latest
+          export IMAGE_TAG=${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/dtu-vibe-ops-02476-train
+          docker push ${IMAGE_TAG}:${{ github.sha }}
+          docker push ${IMAGE_TAG}:latest
+
+      - name: Set image info outputs
+        id: image-info
+        run: |
+          IMAGE_TAG_BASE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/dtu-vibe-ops-02476-train"
+          echo "image-uri-sha=${IMAGE_TAG_BASE}:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "image-uri-latest=${IMAGE_TAG_BASE}:latest" >> $GITHUB_OUTPUT
+          echo "image-size=${{ steps.build-train.outputs.image-size }}" >> $GITHUB_OUTPUT
+
+      - name: Build Summary (PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "## ✅ Training Image Build Validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Status" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Build successful** - Image validated but not pushed to registry" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Size**: \`${{ steps.image-info.outputs.image-size }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image URI**: \`${{ steps.image-info.outputs.image-uri-latest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> **Note**: Images are only pushed to Artifact Registry when merged to \`main\` branch." >> $GITHUB_STEP_SUMMARY
+
+      - name: Build Summary (Main Branch)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "## 🚀 Training Image Built and Pushed Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Image Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image URI (SHA)**: \`${{ steps.image-info.outputs.image-uri-sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image URI (Latest)**: \`${{ steps.image-info.outputs.image-uri-latest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Size**: \`${{ steps.image-info.outputs.image-size }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Model Tracking" >> $GITHUB_STEP_SUMMARY
+          echo "- Models are tracked with **DVC** and automatically pushed to \`gs://vibeops-models\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Models are versioned and linked to code/data versions" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps: Submit Training Job" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Use the **Manual Training Workflow** in GitHub Actions to submit a training job with this image:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. Go to **Actions** → **Train Model (Manual)**" >> $GITHUB_STEP_SUMMARY
+          echo "2. Click **Run workflow**" >> $GITHUB_STEP_SUMMARY
+          echo "3. Select a preset configuration or customize parameters" >> $GITHUB_STEP_SUMMARY
+          echo "4. Choose image tag: \`latest\` (recommended) or \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
 
   build-inference:
     name: Build and Push Inference Docker Image
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      image-uri-sha: ${{ steps.image-info.outputs.image-uri-sha }}
+      image-uri-latest: ${{ steps.image-info.outputs.image-uri-latest }}
+      image-size: ${{ steps.image-info.outputs.image-size }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Build and push inference image
-        run: |
-          echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login \
-            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
-          docker build . --file dockerfiles/inference.dockerfile \
-            --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:${{ github.sha }} \
-            --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:latest
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          create_credentials_file: true
+          export_environment_variables: true
 
-      - name: Push Docker image
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${REGION}-docker.pkg.dev
+
+      - name: Build inference image
+        id: build-inference
+        run: |
+          export IMAGE_TAG=${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/dtu-vibe-ops-02476-inference
+          docker build . --file dockerfiles/inference.dockerfile \
+            --platform linux/amd64 \
+            --tag ${IMAGE_TAG}:${{ github.sha }} \
+            --tag ${IMAGE_TAG}:latest
+          
+          # Get image size
+          IMAGE_SIZE=$(docker images ${IMAGE_TAG}:latest --format "{{.Size}}")
+          echo "image-size=${IMAGE_SIZE}" >> $GITHUB_OUTPUT
+
+      - name: Push inference image to Artifact Registry
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:${{ github.sha }}
-          docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/dtu-vibe-ops-02476-inference:latest
+          export IMAGE_TAG=${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/dtu-vibe-ops-02476-inference
+          docker push ${IMAGE_TAG}:${{ github.sha }}
+          docker push ${IMAGE_TAG}:latest
+
+      - name: Set image info outputs
+        id: image-info
+        run: |
+          IMAGE_TAG_BASE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/dtu-vibe-ops-02476-inference"
+          echo "image-uri-sha=${IMAGE_TAG_BASE}:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "image-uri-latest=${IMAGE_TAG_BASE}:latest" >> $GITHUB_OUTPUT
+          echo "image-size=${{ steps.build-inference.outputs.image-size }}" >> $GITHUB_OUTPUT
+
+      - name: Build Summary (PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "## ✅ Inference Image Build Validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Status" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Build successful** - Image validated but not pushed to registry" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Size**: \`${{ steps.image-info.outputs.image-size }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image URI**: \`${{ steps.image-info.outputs.image-uri-latest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> **Note**: Images are only pushed to Artifact Registry when merged to \`main\` branch." >> $GITHUB_STEP_SUMMARY
+
+      - name: Build Summary (Main Branch)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "## 🚀 Inference Image Built and Pushed Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Image Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image URI (SHA)**: \`${{ steps.image-info.outputs.image-uri-sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image URI (Latest)**: \`${{ steps.image-info.outputs.image-uri-latest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Size**: \`${{ steps.image-info.outputs.image-size }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY

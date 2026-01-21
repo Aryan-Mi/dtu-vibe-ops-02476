@@ -17,9 +17,40 @@ from mlops_project.subsample import subsample_dataset
 if TYPE_CHECKING:
     from pytorch_lightning.loggers.logger import Logger
 
+try:
+    from google.cloud import storage
+except ImportError:
+    storage = None
 
-# Train models written in model.py and store results for comparison and selection of best model.
-# pytorch lightning reference source: https://lightning.ai/pages/community/tutorial/step-by-step-walk-through-of-pytorch-lightning/
+
+def upload_to_gcs(local_path: str | Path, gcs_bucket: str, gcs_path: str) -> str | None:
+    """Upload a file to GCS bucket.
+
+    Args:
+        local_path: Local file path to upload
+        gcs_bucket: GCS bucket name (without gs:// prefix)
+        gcs_path: Destination path in GCS bucket
+
+    Returns:
+        GCS URI (gs://bucket/path) if successful, None otherwise
+    """
+    if storage is None:
+        print("  ⚠ google-cloud-storage not available, skipping GCS upload")
+        return None
+
+    try:
+        client = storage.Client()
+        bucket = client.bucket(gcs_bucket)
+        blob = bucket.blob(gcs_path)
+        blob.upload_from_filename(str(local_path))
+        gcs_uri = f"gs://{gcs_bucket}/{gcs_path}"
+        print(f"  ✓ Uploaded to {gcs_uri}")
+        return gcs_uri
+    except Exception as e:  # noqa: BLE001
+        print(f"  ✗ Failed to upload to GCS: {str(e)}")
+        return None
+
+
 def train_model(
     model: pl.LightningModule,
     model_name: str,
@@ -31,7 +62,6 @@ def train_model(
     wandb_logger: WandbLogger | None = None,
 ) -> tuple[pl.LightningModule, dict]:
     """Train a given model and return the trained model and training metrics."""
-    # Troubleshooting purposes - training slower on cpu
     print(f"CUDA available: {torch.cuda.is_available()}")
     print(f"Device: {torch.device('cuda' if torch.cuda.is_available() else 'cpu')}")
 
@@ -42,8 +72,6 @@ def train_model(
     # stop training model when it stops improving
     early_stopping = EarlyStopping("val_loss", patience=patience)
 
-    # model checkpoint for saving epoch results during training
-    # For picking the best model and also troubleshooting :)
     checkpoint_callback = ModelCheckpoint(
         dirpath=output_path,
         filename=f"{model_name}-{{epoch:02d}}-{{val_loss:.4f}}",
@@ -58,7 +86,6 @@ def train_model(
     if wandb_logger is not None:
         loggers.append(wandb_logger)
 
-    # train model
     trainer = pl.Trainer(
         max_epochs=epochs,
         accelerator="auto",
@@ -165,6 +192,11 @@ def train_with_cfg(cfg: DictConfig) -> None:
 
     Args:
         cfg: Hydra configuration object
+        model_name: Name of the model being trained
+        subsample_percentage: Percentage of data used for subsampling, or None
+
+    Returns:
+        WandbLogger instance if enabled, None otherwise
     """
     # Auto-adjust image size for EfficientNet model variants
     if cfg.model.name == "EfficientNet" and hasattr(cfg.model, "model_size"):
@@ -184,15 +216,133 @@ def train_with_cfg(cfg: DictConfig) -> None:
     print(OmegaConf.to_yaml(cfg))
     print("=" * 80)
 
-    # Set random seed for reproducibility
-    set_seed(cfg.seed)
 
-    model_name = cfg.model.name
+def export_model_to_onnx(model: pl.LightningModule, checkpoint_path: Path, image_size: int) -> Path:
+    """Export trained model to ONNX format.
+
+    Args:
+        model: Trained PyTorch Lightning model
+        checkpoint_path: Path to the model checkpoint
+        image_size: Size of input images
+
+    Returns:
+        Path to the exported ONNX model
+    """
+    onnx_model_path = checkpoint_path.with_suffix(".onnx")
+    dummy = torch.randn(1, 3, image_size, image_size, device="cpu")
+
+    model.eval()
+    model.to("cpu")
+    model.to_onnx(
+        file_path=str(onnx_model_path),
+        input_sample=dummy,
+        input_names=["input"],
+        output_names=["output"],
+        dynamic_axes={
+            "input": {0: "batch_size"},
+            "output": {0: "batch_size"},
+        },
+        export_params=True,
+        opset_version=17,
+    )
+    return onnx_model_path
+
+
+def upload_models_to_gcs(
+    gcs_bucket: str,
+    model_name: str,
+    checkpoint_path: Path,
+    onnx_model_path: Path,
+    results_path: Path,
+) -> tuple[str | None, str | None, str | None]:
+    """Upload models and results to GCS bucket.
+
+    Args:
+        gcs_bucket: GCS bucket name (without gs:// prefix)
+        model_name: Name of the model
+        checkpoint_path: Path to checkpoint file
+        onnx_model_path: Path to ONNX model file
+        results_path: Path to results JSON file
+
+    Returns:
+        Tuple of (checkpoint_gcs_path, onnx_gcs_path, results_gcs_path)
+    """
+    # Remove gs:// prefix if present
+    gcs_bucket = gcs_bucket.replace("gs://", "")
+    print(f"\nUploading models to GCS bucket: {gcs_bucket}")
+
+    # Upload checkpoint
+    checkpoint_gcs_key = f"models/{model_name}/{checkpoint_path.name}"
+    checkpoint_gcs_path = upload_to_gcs(checkpoint_path, gcs_bucket, checkpoint_gcs_key)
+
+    # Upload ONNX model
+    onnx_gcs_key = f"models/{model_name}/{onnx_model_path.name}"
+    onnx_gcs_path = upload_to_gcs(onnx_model_path, gcs_bucket, onnx_gcs_key)
+
+    # Upload training results JSON
+    results_gcs_key = f"models/{model_name}/training_results.json"
+    results_gcs_path = upload_to_gcs(results_path, gcs_bucket, results_gcs_key)
+
+    return checkpoint_gcs_path, onnx_gcs_path, results_gcs_path
+
+
+def save_training_results(
+    cfg: DictConfig,
+    model_name: str,
+    training_metrics: dict,
+    checkpoint_path: Path,
+    onnx_model_path: Path,
+    checkpoint_gcs_path: str | None,
+    onnx_gcs_path: str | None,
+    results_gcs_path: str | None,
+    output_dir: str,
+) -> Path:
+    """Save training results to JSON file.
+
+    Args:
+        cfg: Hydra configuration object
+        model_name: Name of the trained model
+        training_metrics: Dictionary containing training metrics
+        checkpoint_path: Path to model checkpoint
+        onnx_model_path: Path to ONNX model
+        checkpoint_gcs_path: GCS path to checkpoint (if uploaded)
+        onnx_gcs_path: GCS path to ONNX model (if uploaded)
+        results_gcs_path: GCS path to results JSON (if uploaded)
+        output_dir: Output directory for results
+
+    Returns:
+        Path to the saved results JSON file
+    """
+    results_path = Path(output_dir) / "training_results.json"
+    results = {
+        "model": model_name,
+        "val_loss": training_metrics["best_val_loss"],
+        "checkpoint_path": training_metrics["checkpoint_path"],
+        "checkpoint_gcs_path": checkpoint_gcs_path,
+        "onnx_model_path": str(onnx_model_path),
+        "onnx_gcs_path": onnx_gcs_path,
+        "results_gcs_path": results_gcs_path,
+        "configuration": OmegaConf.to_container(cfg, resolve=True),
+    }
+
+    with open(results_path, "w") as f:
+        json.dump(results, f, indent=2)
+
+    return results_path
+
+
+def load_data(cfg: DictConfig) -> tuple:
+    """Load training data with optional subsampling.
+
+    Args:
+        cfg: Hydra configuration object
+
+    Returns:
+        Tuple of (train_loader, val_loader, test_loader)
+    """
     data_path = cfg.data.data_path
-    output_dir = cfg.paths.output_dir
     subsample_percentage = cfg.data.subsample_percentage
 
-    # Step 1: Load data (with optional subsampling)
     if subsample_percentage is not None:
         print(f"\n[1/5] Subsampling dataset ({subsample_percentage * 100:.1f}%)...")
         metadata_path = Path(data_path) / "metadata" / "HAM10000_metadata.csv"
@@ -210,7 +360,7 @@ def train_with_cfg(cfg: DictConfig) -> None:
             print(f"    {dx_category}: {len(images)} images")
 
         # Create dataloaders from subsampled data
-        train_loader, val_loader, test_loader = subsample_dataloader(
+        return subsample_dataloader(
             data_path=data_path,
             subsample_result=subsample_result,
             image_size=cfg.data.image_size,
@@ -218,20 +368,24 @@ def train_with_cfg(cfg: DictConfig) -> None:
             num_workers=cfg.data.num_workers,
             random_seed=cfg.seed,
         )
-    else:
-        print("\n[1/5] Loading full dataset...")
-        train_loader, val_loader, test_loader = create_dataloaders(
-            data_path=data_path,
-            image_size=cfg.data.image_size,
-            batch_size=cfg.data.batch_size,
-            num_workers=cfg.data.num_workers,
-            random_seed=cfg.seed,
-        )
 
-    # Step 2: Define model to train
-    print(f"\n[2/5] Initializing {model_name}...")
-    model = create_model(cfg)
+    print("\n[1/5] Loading full dataset...")
+    return create_dataloaders(
+        data_path=data_path,
+        image_size=cfg.data.image_size,
+        batch_size=cfg.data.batch_size,
+        num_workers=cfg.data.num_workers,
+        random_seed=cfg.seed,
+    )
 
+
+def print_model_info(model_name: str, cfg: DictConfig) -> None:
+    """Print model configuration information.
+
+    Args:
+        model_name: Name of the model
+        cfg: Hydra configuration object
+    """
     print(f"  Model: {model_name}")
     if model_name == "ResNet":
         print(f"    Base channel: {cfg.model.base_channel}")
@@ -245,7 +399,6 @@ def train_with_cfg(cfg: DictConfig) -> None:
     wandb_logger = initialize_wandb_logger(cfg, model_name, subsample_percentage)
     use_wandb = wandb_logger is not None
 
-    # Step 4: Train the model
     print("\n[4/5] Training model...")
     try:
         _, training_metrics = train_model(
@@ -264,9 +417,7 @@ def train_with_cfg(cfg: DictConfig) -> None:
             wandb.finish()
         return
 
-    # Step 5: Save results
     print("\n[5/5] Saving results...")
-
     print("\n" + "=" * 80)
     print("TRAINING SUMMARY")
     print("=" * 80)
@@ -274,44 +425,29 @@ def train_with_cfg(cfg: DictConfig) -> None:
     print(f"Validation Loss: {training_metrics['best_val_loss']:.4f}")
     print("=" * 80)
 
-    # Save results summary
-    results_path = Path(output_dir) / "training_results.json"
     checkpoint_path = Path(training_metrics["checkpoint_path"])
+    image_size = int(cfg.data.image_size)
 
     # Export the trained model to ONNX format
-    onnx_model_path = checkpoint_path.with_suffix(".onnx")
-    image_size = int(cfg.data.image_size)
-    dummy = torch.randn(1, 3, image_size, image_size, device="cpu")
+    onnx_model_path = export_model_to_onnx(model, checkpoint_path, image_size)
 
-    model.eval()
-    model.to("cpu")
-    model.to_onnx(
-        file_path=str(onnx_model_path),
-        input_sample=dummy,
-        input_names=["input"],
-        output_names=["output"],
-        dynamic_axes={
-            "input": {0: "batch_size"},
-            "output": {0: "batch_size"},
-        },
-        export_params=True,  # Include trained weights!
-        opset_version=17,
+    # Save training results (models will be tracked with DVC after training)
+    results_path = save_training_results(
+        cfg=cfg,
+        model_name=model_name,
+        training_metrics=training_metrics,
+        checkpoint_path=checkpoint_path,
+        onnx_model_path=onnx_model_path,
+        checkpoint_gcs_path=None,
+        onnx_gcs_path=None,
+        results_gcs_path=None,
+        output_dir=output_dir,
     )
 
-    results = {
-        "model": model_name,
-        "val_loss": training_metrics["best_val_loss"],
-        "checkpoint_path": training_metrics["checkpoint_path"],
-        "onnx_model_path": str(onnx_model_path),
-        "configuration": OmegaConf.to_container(cfg, resolve=True),
-    }
-
-    with open(results_path, "w") as f:
-        json.dump(results, f, indent=2)
-
-    print(f"\nResults saved to: {results_path}")
-    print(f"Model checkpoint: {training_metrics['checkpoint_path']}")
-    print(f"ONNX model exported to: {onnx_model_path}")
+    print(f"\n✓ Results saved to: {results_path}")
+    print(f"✓ Model checkpoint: {training_metrics['checkpoint_path']}")
+    print(f"✓ ONNX model exported to: {onnx_model_path}")
+    print("\n📦 Models saved locally. They will be tracked with DVC and pushed to GCS by the entrypoint script.")
 
     # Finish W&B run
     if use_wandb:
