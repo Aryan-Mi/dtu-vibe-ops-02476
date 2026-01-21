@@ -128,7 +128,39 @@ def create_model(cfg: DictConfig) -> pl.LightningModule:
     raise ValueError(msg)
 
 
-def train_with_config(cfg: DictConfig) -> None:
+def initialize_wandb_logger(cfg: DictConfig, model_name: str, subsample_percentage: float | None) -> WandbLogger | None:
+    """Initialize W&B logger if enabled in config.
+    
+    Args:
+        cfg: Hydra configuration object
+        model_name: Name of the model being trained
+        subsample_percentage: Percentage of data subsampled (or None for full dataset)
+        
+    Returns:
+        WandbLogger instance if enabled, None otherwise
+    """
+    use_wandb = cfg.get("wandb", {}).get("enabled", False)
+
+    if use_wandb:
+        print("\n[3/5] Initializing W&B logging...")
+        wandb_cfg = cfg.wandb
+        wandb_config = OmegaConf.to_container(cfg, resolve=True)
+
+        run_name = wandb_cfg.get("run_name") or f"{model_name}-{subsample_percentage or 'full'}"
+        wandb_logger = WandbLogger(
+            project=wandb_cfg.get("project", "skin-lesion-classification"),
+            name=run_name,
+            config=wandb_config,
+            log_model=wandb_cfg.get("log_model", True),
+        )
+        print(f"  W&B logging enabled: {wandb_cfg.get('project')}/{run_name}")
+        return wandb_logger
+    
+    print("\n[3/5] W&B logging disabled")
+    return None
+
+
+def train_with_cfg(cfg: DictConfig) -> None:
     """Core training logic that handles both normal runs and sweep iterations.
 
     Args:
@@ -141,7 +173,8 @@ def train_with_config(cfg: DictConfig) -> None:
             cfg.data.image_size = INPUT_SIZE[model_size]
             print(f"Auto-adjusted image_size to {cfg.data.image_size} for EfficientNet {model_size}")
         else:
-            raise ValueError(f"Unknown EfficientNet model size '{model_size}'")
+            msg = f"Unknown EfficientNet model size '{model_size}'"
+            raise ValueError(msg)
         
     # Print resolved configuration
     print("=" * 80)
@@ -209,24 +242,8 @@ def train_with_config(cfg: DictConfig) -> None:
         print(f"    Freeze backbone: {cfg.model.freeze_backbone}")
 
     # Step 3: Initialize W&B logger (if enabled)
-    wandb_logger = None
-    use_wandb = cfg.get("wandb", {}).get("enabled", False)
-
-    if use_wandb:
-        print("\n[3/5] Initializing W&B logging...")
-        wandb_cfg = cfg.wandb
-        wandb_config = OmegaConf.to_container(cfg, resolve=True)
-
-        run_name = wandb_cfg.get("run_name") or f"{model_name}-{subsample_percentage or 'full'}"
-        wandb_logger = WandbLogger(
-            project=wandb_cfg.get("project", "skin-lesion-classification"),
-            name=run_name,
-            config=wandb_config,
-            log_model=wandb_cfg.get("log_model", True),
-        )
-        print(f"  W&B logging enabled: {wandb_cfg.get('project')}/{run_name}")
-    else:
-        print("\n[3/5] W&B logging disabled")
+    wandb_logger = initialize_wandb_logger(cfg, model_name, subsample_percentage)
+    use_wandb = wandb_logger is not None
 
     # Step 4: Train the model
     print("\n[4/5] Training model...")
@@ -316,7 +333,7 @@ def train(cfg: DictConfig) -> None:
         # Update config with sweep parameters from wandb
         cfg = OmegaConf.merge(cfg, OmegaConf.create(dict(wandb.config)))
     
-    train_with_config(cfg)
+    train_with_cfg(cfg)
 
 
 if __name__ == "__main__":
