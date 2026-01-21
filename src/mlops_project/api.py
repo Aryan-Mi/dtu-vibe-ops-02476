@@ -28,7 +28,6 @@ runtime_config = None
 CONFIG_DIR = str(Path(__file__).parent.parent.parent / "configs")
 
 
-# Load Hydra config
 def load_config():
     """Load Hydra config without changing working directory."""
     with initialize_config_dir(config_dir=CONFIG_DIR, version_base=None):
