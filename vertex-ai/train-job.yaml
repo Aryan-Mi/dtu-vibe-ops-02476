@@ -21,12 +21,9 @@ workerPoolSpecs:
       
       # Environment variables
       env:
-        # Set GCS bucket for model storage (optional, can also be set in config.yaml)
-        - name: GCS_MODELS_BUCKET
-          value: "vibeops-models"
         
         # W&B API key (if using W&B logging)
-        # this via gcloud secrets or Vertex AI secrets manager
+        # Set this via gcloud secrets or Vertex AI secrets manager
         # - name: WANDB_API_KEY
         #   value: "your-wandb-api-key"
       
@@ -37,4 +34,3 @@ workerPoolSpecs:
         - data.subsample_percentage=0.01
         - training.max_epochs=2
         - wandb.enabled=false
-        - paths.gcs_bucket=gs://vibeops-models
