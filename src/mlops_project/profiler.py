@@ -12,9 +12,9 @@ class ProfilerCallback(pl.Callback):
         self,
         output_dir: str,
         schedule_every_n_steps: int = 50,
-        warmup_steps: int = 1,
-        active_steps: int = 3,
-        repeat_cycles: int = 2,
+        warmup_steps: int = 5,
+        active_steps: int = 2,
+        repeat_cycles: int = 1,
     ):
         super().__init__()
         self.output_dir = Path(output_dir)
@@ -23,6 +23,11 @@ class ProfilerCallback(pl.Callback):
         self.active_steps = active_steps
         self.repeat_cycles = repeat_cycles
         self.profiler = None
+        self._profiling_active = False
+
+        # Increase file descriptor limit warnings
+        print(f"  Profiler initialized with {repeat_cycles} cycle(s), {active_steps} active steps per cycle")
+        print("  Tip: If you get 'Too many open files' error, reduce repeat_cycles or active_steps")
 
     def on_train_start(self, trainer, pl_module):
         """Initialize PyTorch profiler when training starts."""
