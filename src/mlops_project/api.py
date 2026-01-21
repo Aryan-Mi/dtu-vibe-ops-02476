@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import onnxruntime as ort
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from hydra import compose, initialize_config_dir
 from PIL import Image
 from pydantic import BaseModel
@@ -52,11 +52,13 @@ async def lifespan(app: FastAPI):
 
 
 class PredictionResponse(BaseModel):
+    """Response model for predictions."""
+
     predicted_class: int
     diagnosis: str
     confidence: float
     is_cancer: bool
-    probabilities: Dict[str, float]
+    probabilities: dict[str, float]
 
 
 app = FastAPI(lifespan=lifespan)
@@ -82,7 +84,7 @@ async def perform_inference(file: UploadFile = File(...)):
         Dictionary with predicted class, diagnosis name, and probabilities
     """
     if model_session is None:
-        return {"error": "Model not loaded"}
+        raise HTTPException(status_code=503, detail="Model not loaded")
 
     i_image = Image.open(file.file)
     if i_image.mode != "RGB":
