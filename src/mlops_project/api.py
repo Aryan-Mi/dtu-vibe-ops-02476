@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from torch import Tensor
 
 MODEL_PATH = (
-    Path(__file__).parent.parent.parent / "models" / "EfficientNet" / "EfficientNet-epoch=04-val_loss=0.4910.onnx"
+    Path(__file__).parent.parent.parent / "models" / "EfficientNet" / "EfficientNet-epoch=04-val_loss=0.4641.onnx"
 )  # noqa: E501
 IMAGE_SIZE = 224
 
