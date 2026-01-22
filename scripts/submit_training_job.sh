@@ -64,7 +64,7 @@ if [ $# -gt 0 ]; then
     for arg in "$@"; do
         ARGS+=("$arg")
     done
-    
+
     # Append args to the args section in temp config
     if grep -q "args:" "$TEMP_CONFIG"; then
         # Remove empty args: line if no args exist, or append to existing args

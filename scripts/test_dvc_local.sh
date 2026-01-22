@@ -106,7 +106,7 @@ echo ""
 if [ "$PUSH_TO_GCS" = true ]; then
     echo -e "${BLUE}[4/4] Pushing models to GCS...${NC}"
     echo "  Remote: gcs_models_remote (gs://vibeops-models)"
-    
+
     if uv run dvc push models.dvc --remote gcs_models_remote 2>&1; then
         echo -e "${GREEN}✓ Successfully pushed models to GCS${NC}"
         echo ""

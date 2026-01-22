@@ -1,5 +1,5 @@
 # Vertex AI Custom Job Configuration for Training
-# 
+#
 # Usage:
 #   gcloud ai custom-jobs create \
 #     --region=europe-west1 \
@@ -18,15 +18,15 @@ workerPoolSpecs:
       # Artifact Registry: europe-west1-docker.pkg.dev/PROJECT_ID/dtu-vibe-ops/dtu-vibe-ops-02476-train:latest
       # GCR: gcr.io/PROJECT_ID/dtu-vibe-ops-02476-train:latest
       imageUri: europe-west1-docker.pkg.dev/PROJECT_ID/dtu-vibe-ops/dtu-vibe-ops-02476-train:latest
-      
+
       # Environment variables
       env:
-        
+
         # W&B API key (if using W&B logging)
         # Set this via gcloud secrets or Vertex AI secrets manager
         # - name: WANDB_API_KEY
         #   value: "your-wandb-api-key"
-      
+
       # Training script arguments (Hydra config overrides)
       # These are passed to the training script
       args:

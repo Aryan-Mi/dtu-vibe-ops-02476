@@ -2,8 +2,8 @@
 
 import numpy as np
 import pandas as pd
-import pytest
 from PIL import Image
+import pytest
 
 from mlops_project.data import DX_TO_CLASS
 

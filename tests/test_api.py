@@ -3,10 +3,10 @@
 import io
 from unittest.mock import MagicMock, patch
 
-import numpy as np
-import pytest
 from fastapi.testclient import TestClient
+import numpy as np
 from PIL import Image
+import pytest
 
 from mlops_project.api import app
 

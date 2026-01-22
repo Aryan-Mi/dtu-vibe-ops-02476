@@ -1,6 +1,6 @@
 import pytorch_lightning as pl
-import torch
 from pytorch_lightning.loggers import WandbLogger
+import torch
 
 from mlops_project.model import BaselineCNN, EfficientNet, ResNet
 

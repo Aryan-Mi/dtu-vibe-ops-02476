@@ -53,7 +53,7 @@ jobs:
             --platform linux/amd64 \
             --tag ${IMAGE_TAG}:${{ github.sha }} \
             --tag ${IMAGE_TAG}:latest
-          
+
           # Get image size
           IMAGE_SIZE=$(docker images ${IMAGE_TAG}:latest --format "{{.Size}}")
           echo "image-size=${IMAGE_SIZE}" >> $GITHUB_OUTPUT
@@ -148,7 +148,7 @@ jobs:
             --platform linux/amd64 \
             --tag ${IMAGE_TAG}:${{ github.sha }} \
             --tag ${IMAGE_TAG}:latest
-          
+
           # Get image size
           IMAGE_SIZE=$(docker images ${IMAGE_TAG}:latest --format "{{.Size}}")
           echo "image-size=${IMAGE_SIZE}" >> $GITHUB_OUTPUT

@@ -16,12 +16,22 @@ repos:
       - id: debug-statements
       - id: mixed-line-ending
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.11
+  - repo: local
     hooks:
       # 1) Apply Ruff autofixes first (imports, small refactors, etc.)
+      # Uses the same Ruff binary as GitHub Actions (via uv)
       - id: ruff
-        args: [--fix]
+        name: ruff
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+        pass_filenames: true
+        require_serial: false
 
       # 2) Then apply Ruff's formatter last (source of truth for formatting)
       - id: ruff-format
+        name: ruff-format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+        pass_filenames: true
