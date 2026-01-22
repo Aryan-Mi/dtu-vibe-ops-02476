@@ -61,25 +61,46 @@ def create_demo_model(ctx: Context) -> None:
 
 
 @task
-def deploy_to_cloud_run(ctx: Context, project_id: str, region: str = "europe-west1") -> None:
+def deploy_to_cloud_run(
+    ctx: Context, project_id: str, region: str = "europe-west1", artifact_registry: str = "dtu-vibe-ops"
+) -> None:
     """Deploy API to Google Cloud Run."""
-    print(f"Deploying to project: {project_id}, region: {region}")
+    print(f"Deploying to project: {project_id}, region: {region}, registry: {artifact_registry}")
 
-    # Tag locally
-    image_name = f"gcr.io/{project_id}/skin-lesion-api:latest"
-    ctx.run(f"docker build -t {image_name} -f dockerfiles/api.dockerfile .", echo=True, pty=not WINDOWS)
+    # Configure Docker for Artifact Registry (suppress output)
+    ctx.run(
+        f"gcloud auth configure-docker {region}-docker.pkg.dev --quiet",
+        echo=False,
+        pty=not WINDOWS,
+    )
 
-    # Push to GCR
-    ctx.run(f"docker push {image_name}", echo=True, pty=not WINDOWS)
+    # Tag locally with Artifact Registry format
+    image_name = f"{region}-docker.pkg.dev/{project_id}/{artifact_registry}/skin-lesion-api:latest"
+
+    # Build image (suppress most output, only show errors and final status)
+    print("Building Docker image...")
+    ctx.run(
+        f"docker build -t {image_name} -f dockerfiles/api.dockerfile . --quiet",
+        echo=False,
+        pty=not WINDOWS,
+    )
+    print("✓ Image built successfully")
+
+    # Push to Artifact Registry (suppress verbose output)
+    print("Pushing image to Artifact Registry...")
+    ctx.run(f"docker push {image_name} --quiet", echo=False, pty=not WINDOWS)
+    print("✓ Image pushed successfully")
 
     # Deploy to Cloud Run
+    print("Deploying to Cloud Run...")
     ctx.run(
         f"gcloud run deploy skin-lesion-api "
         f"--image {image_name} "
         f"--platform managed "
         f"--region {region} "
         f"--allow-unauthenticated "
-        f"--port 8080",
-        echo=True,
+        f"--port 8080 "
+        f"--quiet",
+        echo=True,  # Keep echo for deployment status
         pty=not WINDOWS,
     )

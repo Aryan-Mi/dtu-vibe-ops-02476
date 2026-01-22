@@ -65,8 +65,12 @@ jobs:
 
       - name: DVC pull
         run: |
-          uv run dvc pull models.dvc
+          uv run dvc pull models.dvc --remote gcs_models_remote
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 
       - name: Deploy to Cloud Run
         run: |
-          uv run invoke deploy-to-cloud-run --project-id=${{ env.PROJECT_ID }} --region=${{ env.REGION }}
+          uv run invoke deploy-to-cloud-run --project-id=${{ env.PROJECT_ID }} --region=${{ env.REGION }} --artifact-registry=${{ env.ARTIFACT_REGISTRY }}
