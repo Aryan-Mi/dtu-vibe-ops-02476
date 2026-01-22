@@ -1,15 +1,15 @@
 # bump
-import os
-import subprocess
 from contextlib import asynccontextmanager
+import os
 from pathlib import Path
+import subprocess
 from typing import TYPE_CHECKING, cast
 
-import numpy as np
-import onnxruntime as ort
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from hydra import compose, initialize_config_dir
 from hydra.core.global_hydra import GlobalHydra
+import numpy as np
+import onnxruntime as ort
 from PIL import Image
 from pydantic import BaseModel
 

@@ -2,8 +2,8 @@ import random
 
 import numpy as np
 import pandas as pd
-import torch
 from sklearn.model_selection import train_test_split
+import torch
 from torch.utils.data import DataLoader
 
 from mlops_project.data import CancerDataset, get_transforms

@@ -2,12 +2,12 @@ from collections.abc import Callable
 from pathlib import Path
 
 import pandas as pd
-import torch
-import typer
 from PIL import Image
+import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 from torchvision.transforms import InterpolationMode
+import typer
 
 DX_TO_CLASS = {
     "nv": 0,  # Melanocytic nevi
