@@ -34,7 +34,7 @@ jobs:
 
     steps:
       - name: Wait for Unit Tests to complete
-        uses: lewagon/wait-on-check-action@v1.3.4
+        uses: lewagon/wait-on-check-action@v1.4.1
         with:
           ref: ${{ github.sha }}
           check-regexp: '^test \(.+\)$'
@@ -42,7 +42,7 @@ jobs:
           wait-interval: 10
 
       - name: Wait for Inference Image to be pushed
-        uses: lewagon/wait-on-check-action@v1.3.4
+        uses: lewagon/wait-on-check-action@v1.4.1
         with:
           ref: ${{ github.sha }}
           check-regexp: 'Build and Push Inference Docker Image'
