@@ -136,12 +136,12 @@ fi
 echo ""
 if [ "$USE_VERTEX_AI" = true ]; then
     echo -e "${BLUE}[4/5] Submitting training job to Vertex AI...${NC}"
-    
+
     # Create temporary config with the built image
     TEMP_CONFIG=$(mktemp)
     sed "s|europe-west1-docker.pkg.dev/PROJECT_ID/dtu-vibe-ops/dtu-vibe-ops-02476-train:latest|${IMAGE_TAG_LATEST}|g" \
         vertex-ai/train-job.yaml > "$TEMP_CONFIG"
-    
+
     # Add quick training args if not provided
     if [ ${#TRAINING_ARGS[@]} -eq 0 ]; then
         TRAINING_ARGS=(
@@ -150,7 +150,7 @@ if [ "$USE_VERTEX_AI" = true ]; then
             "wandb.enabled=false"
         )
     fi
-    
+
     # Add args to config
     for arg in "${TRAINING_ARGS[@]}"; do
         if ! grep -q "$arg" "$TEMP_CONFIG"; then
@@ -160,28 +160,28 @@ if [ "$USE_VERTEX_AI" = true ]; then
         fi
     done
     rm -f "${TEMP_CONFIG}.bak"
-    
+
     JOB_NAME="test-training-$(date +%Y%m%d-%H%M%S)"
     echo "  Job Name: $JOB_NAME"
     echo "  Image: ${IMAGE_TAG_LATEST}"
     echo "  Args: ${TRAINING_ARGS[*]}"
     echo ""
-    
+
     JOB_OUTPUT=$(gcloud ai custom-jobs create \
         --project="$PROJECT_ID" \
         --region="$REGION" \
         --display-name="$JOB_NAME" \
         --config="$TEMP_CONFIG" \
         2>&1)
-    
+
     rm -f "$TEMP_CONFIG"
-    
+
     # Extract job ID (works on both Linux and macOS)
     # Try multiple patterns to extract the job ID
     JOB_ID=$(echo "$JOB_OUTPUT" | grep -oE 'customJobs/[0-9]+' | sed 's|customJobs/||' || \
              echo "$JOB_OUTPUT" | grep -oE '[0-9]{15,20}' | head -1 || \
              echo "")
-    
+
     if [ -n "$JOB_ID" ]; then
         echo -e "  ${GREEN}✓ Job submitted successfully!${NC}"
         echo ""
@@ -200,14 +200,14 @@ if [ "$USE_VERTEX_AI" = true ]; then
         echo "$JOB_OUTPUT"
         exit 1
     fi
-    
+
     echo ""
     echo -e "${BLUE}[5/5] Waiting for job to complete...${NC}"
     echo "  (This may take a few minutes. You can monitor progress using the commands above.)"
     echo ""
     echo "  To check if models were pushed to DVC:"
     echo "    gsutil ls gs://vibeops-models/"
-    
+
 else
     echo -e "${BLUE}[4/5] Running training locally with Docker...${NC}"
     echo ""
@@ -217,10 +217,10 @@ else
     echo "    3. Track models with DVC"
     echo "    4. Push models to gs://vibeops-models"
     echo ""
-    
+
     # Create local directories for volumes
     mkdir -p models data/raw data/processed logs outputs
-    
+
     # Set up quick training args if not provided
     if [ ${#TRAINING_ARGS[@]} -eq 0 ]; then
         TRAINING_ARGS=(
@@ -229,16 +229,16 @@ else
             "wandb.enabled=false"
         )
     fi
-    
+
     echo "  Training args: ${TRAINING_ARGS[*]}"
     echo ""
-    
+
     # Convert array to properly quoted arguments for docker run
     DOCKER_ARGS=()
     for arg in "${TRAINING_ARGS[@]}"; do
         DOCKER_ARGS+=("$arg")
     done
-    
+
     # Run Docker container
     # Mount models directory so we can see the output locally
     # Use host network and pass through GCP credentials
@@ -252,9 +252,9 @@ else
         -e GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json \
         ${IMAGE_TAG_LATEST} \
         "${DOCKER_ARGS[@]}"
-    
+
     TRAINING_EXIT_CODE=$?
-    
+
     if [ $TRAINING_EXIT_CODE -eq 0 ]; then
         echo ""
         echo -e "${GREEN}✓ Training completed successfully!${NC}"
@@ -263,10 +263,10 @@ else
         echo -e "${RED}✗ Training failed with exit code $TRAINING_EXIT_CODE${NC}"
         exit 1
     fi
-    
+
     echo ""
     echo -e "${BLUE}[5/5] Verifying DVC model tracking...${NC}"
-    
+
     if [ -f "models.dvc" ]; then
         echo -e "  ${GREEN}✓ models.dvc file exists${NC}"
         echo "  Content:"
@@ -275,7 +275,7 @@ else
     else
         echo -e "  ${YELLOW}⚠ models.dvc file not found (may need to be created manually)${NC}"
     fi
-    
+
     if [ -d "models" ] && [ "$(ls -A models)" ]; then
         echo -e "  ${GREEN}✓ Models directory contains files${NC}"
         echo "  Models found:"
@@ -284,7 +284,7 @@ else
     else
         echo -e "  ${YELLOW}⚠ Models directory is empty${NC}"
     fi
-    
+
     # Check if models were pushed to GCS
     echo "  Checking if models were pushed to GCS..."
     if gsutil ls gs://vibeops-models/ &>/dev/null; then

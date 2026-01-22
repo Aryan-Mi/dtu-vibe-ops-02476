@@ -24,7 +24,7 @@ if [ -f "$METADATA_PATH" ]; then
 else
     echo "Data not found at $METADATA_PATH"
     echo "  Pulling data from GCS using DVC..."
-    
+
     # Pull data using DVC
     # DVC will use Application Default Credentials (ADC) from Vertex AI service account
     echo "  Pulling data.dvc (full dataset)..."
@@ -72,16 +72,16 @@ echo ""
 # Track models with DVC and push to GCS
 if [ -d "models" ] && [ "$(ls -A models)" ]; then
     echo "Tracking models with DVC..."
-    
+
     # Ensure DVC is initialized and configured for no-scm mode
     if [ ! -d ".dvc" ]; then
         echo "  Initializing DVC..."
         uv run dvc init --no-scm
     fi
-    
+
     # Ensure DVC knows it doesn't need git
     uv run dvc config core.no_scm true 2>/dev/null || true
-    
+
     # Check if models.dvc exists, if not create it
     if [ ! -f "models.dvc" ]; then
         echo "  Creating models.dvc..."
@@ -90,7 +90,7 @@ if [ -d "models" ] && [ "$(ls -A models)" ]; then
         echo "  Updating models.dvc..."
         uv run dvc add models/ --force
     fi
-    
+
     # Push models to the models remote
     echo "  Pushing models to GCS (gs://vibeops-models)..."
     if uv run dvc push models.dvc --remote gcs_models_remote 2>&1; then

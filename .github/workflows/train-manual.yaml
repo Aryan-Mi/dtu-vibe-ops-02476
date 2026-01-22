@@ -85,19 +85,19 @@ jobs:
           MAX_EPOCHS="${{ inputs.max_epochs }}"
           MACHINE_TYPE="${{ inputs.machine_type }}"
           IMAGE_TAG="${{ inputs.image_tag }}"
-          
+
           # Build image URI
           IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/dtu-vibe-ops-02476-train:${IMAGE_TAG}"
-          
+
           # Initialize args array
           ARGS=()
           WANDB_ENABLED="false"
-          
+
           # Check if WANDB_API_KEY secret exists
           if [ -n "${{ secrets.WANDB_API_KEY }}" ]; then
             WANDB_ENABLED="true"
           fi
-          
+
           # Set configuration based on preset
           case "$PRESET" in
             quick-test)
@@ -150,15 +150,15 @@ jobs:
                   ARGS+=("model=efficientnet")
                   ;;
               esac
-              
+
               if [ "$SUBSAMPLE" != "null" ] && [ -n "$SUBSAMPLE" ]; then
                 ARGS+=("data.subsample_percentage=${SUBSAMPLE}")
               else
                 ARGS+=("data.subsample_percentage=null")
               fi
-              
+
               ARGS+=("training.max_epochs=${MAX_EPOCHS}")
-              
+
               if [ "$WANDB_ENABLED" = "true" ]; then
                 ARGS+=("wandb.enabled=true")
               else
@@ -166,13 +166,13 @@ jobs:
               fi
               ;;
           esac
-          
+
           # Convert args array to YAML format
           ARGS_YAML=""
           for arg in "${ARGS[@]}"; do
             ARGS_YAML="${ARGS_YAML}        - ${arg}"$'\n'
           done
-          
+
           # Create job config YAML
           cat > /tmp/job-config.yaml << EOF
           workerPoolSpecs:
@@ -183,25 +183,25 @@ jobs:
                 imageUri: ${IMAGE_URI}
                 env:
           EOF
-          
+
           # Add WANDB_API_KEY if available
           if [ "$WANDB_ENABLED" = "true" ]; then
             echo "                  - name: WANDB_API_KEY" >> /tmp/job-config.yaml
             echo "                    value: \"${{ secrets.WANDB_API_KEY }}\"" >> /tmp/job-config.yaml
           fi
-          
+
           # Add args section
           cat >> /tmp/job-config.yaml << EOF
                 args:
           ${ARGS_YAML}
           EOF
-          
+
           # Output configuration for summary
           echo "config-file=/tmp/job-config.yaml" >> $GITHUB_OUTPUT
           echo "image-uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
           echo "args=${ARGS[*]}" >> $GITHUB_OUTPUT
           echo "wandb-enabled=${WANDB_ENABLED}" >> $GITHUB_OUTPUT
-          
+
           # Display configuration
           echo "Generated Training Configuration:"
           echo "  Preset: ${PRESET}"
@@ -217,22 +217,22 @@ jobs:
         id: submit-job
         run: |
           JOB_NAME="dtu-vibe-ops-training-$(date +%Y%m%d-%H%M%S)"
-          
+
           echo "Submitting training job: ${JOB_NAME}"
-          
+
           JOB_OUTPUT=$(gcloud ai custom-jobs create \
             --project="${PROJECT_ID}" \
             --region="${REGION}" \
             --display-name="${JOB_NAME}" \
             --config=/tmp/job-config.yaml \
             2>&1)
-          
+
           echo "Job submission output:"
           echo "$JOB_OUTPUT"
-          
+
           # Extract job ID from output
           JOB_ID=$(echo "$JOB_OUTPUT" | grep -oP 'customJobs/\K[0-9]+' || echo "")
-          
+
           if [ -n "$JOB_ID" ]; then
             echo "job-id=${JOB_ID}" >> $GITHUB_OUTPUT
             echo "job-name=${JOB_NAME}" >> $GITHUB_OUTPUT

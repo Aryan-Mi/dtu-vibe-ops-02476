@@ -33,4 +33,3 @@ cd /zhome/82/3/191611/MLOps/dtu-vibe-ops-02476
 # Start W&B sweep agent
 echo "Starting W&B sweep..."
 uv run wandb agent vibe-ops/skin-lesion-cancer-classification/6g8p2tqi
-
