@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 from invoke.context import Context
 from invoke.tasks import task
@@ -93,14 +94,44 @@ def deploy_to_cloud_run(
 
     # Deploy to Cloud Run
     print("Deploying to Cloud Run...")
-    ctx.run(
-        f"gcloud run deploy skin-lesion-api "
-        f"--image {image_name} "
-        f"--platform managed "
-        f"--region {region} "
-        f"--allow-unauthenticated "
-        f"--port 8080 "
-        f"--quiet",
-        echo=True,  # Keep echo for deployment status
-        pty=not WINDOWS,
+    # Use subprocess to filter out spinner lines while preserving errors
+    cmd = [
+        "gcloud",
+        "run",
+        "deploy",
+        "skin-lesion-api",
+        "--image",
+        image_name,
+        "--platform",
+        "managed",
+        "--region",
+        region,
+        "--allow-unauthenticated",
+        "--port",
+        "8080",
+        "--quiet",
+    ]
+
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
     )
+
+    # Filter out spinner lines in real-time
+    spinner_chars = ["⠹", "⠼", "⠶", "⠧", "⠏", "⠛"]
+    for line in process.stdout:
+        # Skip lines that are just spinner updates
+        if "Creating Revision" in line and any(char in line for char in spinner_chars):
+            continue
+        # Print other output
+        if line.strip():
+            print(line.rstrip())
+
+    process.wait()
+    if process.returncode != 0:
+        error_msg = f"Cloud Run deployment failed with exit code {process.returncode}"
+        raise Exception(error_msg)
+    print("✓ Deployment completed successfully")
