@@ -1,4 +1,3 @@
-# bump
 from contextlib import asynccontextmanager
 import os
 from pathlib import Path
@@ -6,6 +5,7 @@ import subprocess
 from typing import TYPE_CHECKING, cast
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from hydra import compose, initialize_config_dir
 from hydra.core.global_hydra import GlobalHydra
 import numpy as np
@@ -280,6 +280,13 @@ class PredictionResponse(BaseModel):
 
 
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["POST", "GET"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
