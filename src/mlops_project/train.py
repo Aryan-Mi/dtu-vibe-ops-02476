@@ -10,8 +10,8 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import CSVLogger, WandbLogger
 
 import wandb
-from mlops_project.dataloader import create_dataloaders, set_seed, subsample_dataloader
-from mlops_project.model import BaselineCNN, EfficientNet, ResNet
+from mlops_project.dataloader import create_dataloaders, subsample_dataloader
+from mlops_project.model import INPUT_SIZE, BaselineCNN, EfficientNet, ResNet
 from mlops_project.subsample import subsample_dataset
 
 if TYPE_CHECKING:
@@ -155,8 +155,40 @@ def create_model(cfg: DictConfig) -> pl.LightningModule:
     raise ValueError(msg)
 
 
-def setup_wandb_logger(cfg: DictConfig, model_name: str, subsample_percentage: float | None) -> WandbLogger | None:
-    """Initialize W&B logger if enabled in configuration.
+def initialize_wandb_logger(cfg: DictConfig, model_name: str, subsample_percentage: float | None) -> WandbLogger | None:
+    """Initialize W&B logger if enabled in config.
+
+    Args:
+        cfg: Hydra configuration object
+        model_name: Name of the model being trained
+        subsample_percentage: Percentage of data subsampled (or None for full dataset)
+
+    Returns:
+        WandbLogger instance if enabled, None otherwise
+    """
+    use_wandb = cfg.get("wandb", {}).get("enabled", False)
+
+    if use_wandb:
+        print("\n[3/5] Initializing W&B logging...")
+        wandb_cfg = cfg.wandb
+        wandb_config = OmegaConf.to_container(cfg, resolve=True)
+
+        run_name = wandb_cfg.get("run_name") or f"{model_name}-{subsample_percentage or 'full'}"
+        wandb_logger = WandbLogger(
+            project=wandb_cfg.get("project", "skin-lesion-classification"),
+            name=run_name,
+            config=wandb_config,
+            log_model=wandb_cfg.get("log_model", True),
+        )
+        print(f"  W&B logging enabled: {wandb_cfg.get('project')}/{run_name}")
+        return wandb_logger
+
+    print("\n[3/5] W&B logging disabled")
+    return None
+
+
+def train_with_cfg(cfg: DictConfig) -> None:
+    """Core training logic that handles both normal runs and sweep iterations.
 
     Args:
         cfg: Hydra configuration object
@@ -166,24 +198,23 @@ def setup_wandb_logger(cfg: DictConfig, model_name: str, subsample_percentage: f
     Returns:
         WandbLogger instance if enabled, None otherwise
     """
-    use_wandb = cfg.get("wandb", {}).get("enabled", False)
-    if not use_wandb:
-        print("\n[3/5] W&B logging disabled")
-        return None
+    # Auto-adjust image size for EfficientNet model variants
+    if cfg.model.name == "EfficientNet" and hasattr(cfg.model, "model_size"):
+        model_size = cfg.model.model_size
+        if model_size in INPUT_SIZE:
+            cfg.data.image_size = INPUT_SIZE[model_size]
+            print(f"Auto-adjusted image_size to {cfg.data.image_size} for EfficientNet {model_size}")
+        else:
+            msg = f"Unknown EfficientNet model size '{model_size}'"
+            raise ValueError(msg)
 
-    print("\n[3/5] Initializing W&B logging...")
-    wandb_cfg = cfg.wandb
-    wandb_config = OmegaConf.to_container(cfg, resolve=True)
-
-    run_name = wandb_cfg.get("run_name") or f"{model_name}-{subsample_percentage or 'full'}"
-    wandb_logger = WandbLogger(
-        project=wandb_cfg.get("project", "skin-lesion-classification"),
-        name=run_name,
-        config=wandb_config,
-        log_model=wandb_cfg.get("log_model", True),
-    )
-    print(f"  W&B logging enabled: {wandb_cfg.get('project')}/{run_name}")
-    return wandb_logger
+    # Print resolved configuration
+    print("=" * 80)
+    print("SKIN LESION CLASSIFICATION - MODEL TRAINING")
+    print("=" * 80)
+    print("\nResolved Configuration:")
+    print(OmegaConf.to_yaml(cfg))
+    print("=" * 80)
 
 
 def export_model_to_onnx(model: pl.LightningModule, checkpoint_path: Path, image_size: int) -> Path:
@@ -364,37 +395,9 @@ def print_model_info(model_name: str, cfg: DictConfig) -> None:
         print(f"    Pretrained: {cfg.model.pretrained}")
         print(f"    Freeze backbone: {cfg.model.freeze_backbone}")
 
-
-@hydra.main(version_base=None, config_path="../../configs", config_name="config")
-def train(cfg: DictConfig) -> None:
-    """Train specified model on skin lesion dataset with Hydra configuration and W&B logging.
-
-    Args:
-        cfg: Hydra configuration object
-    """
-    # Print resolved configuration
-    print("=" * 80)
-    print("SKIN LESION CLASSIFICATION - MODEL TRAINING")
-    print("=" * 80)
-    print("\nResolved Configuration:")
-    print(OmegaConf.to_yaml(cfg))
-    print("=" * 80)
-
-    # Set random seed for reproducibility
-    set_seed(cfg.seed)
-
-    model_name = cfg.model.name
-    output_dir = cfg.paths.output_dir
-    subsample_percentage = cfg.data.subsample_percentage
-    use_wandb = cfg.get("wandb", {}).get("enabled", False)
-
-    train_loader, val_loader, test_loader = load_data(cfg)
-
-    print(f"\n[2/5] Initializing {model_name}...")
-    model = create_model(cfg)
-    print_model_info(model_name, cfg)
-
-    wandb_logger = setup_wandb_logger(cfg, model_name, subsample_percentage)
+    # Step 3: Initialize W&B logger (if enabled)
+    wandb_logger = initialize_wandb_logger(cfg, model_name, subsample_percentage)
+    use_wandb = wandb_logger is not None
 
     print("\n[4/5] Training model...")
     try:
@@ -450,6 +453,23 @@ def train(cfg: DictConfig) -> None:
     if use_wandb:
         wandb.finish()
         print("\nW&B run finished. View results at: https://wandb.ai")
+
+
+@hydra.main(version_base=None, config_path="../../configs", config_name="config")
+def train(cfg: DictConfig) -> None:
+    """Train specified model on skin lesion dataset with Hydra configuration and W&B logging.
+
+    Supports both normal training runs and W&B sweeps.
+
+    Args:
+        cfg: Hydra configuration object
+    """
+    # Check if running as part of a W&B sweep
+    if wandb.run is not None and wandb.run.sweep_id is not None:
+        # Update config with sweep parameters from wandb
+        cfg = OmegaConf.merge(cfg, OmegaConf.create(dict(wandb.config)))
+
+    train_with_cfg(cfg)
 
 
 if __name__ == "__main__":
