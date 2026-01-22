@@ -65,7 +65,7 @@ jobs:
 
       - name: DVC pull
         run: |
-          uv run dvc pull models.dvc
+          uv run dvc pull models.dvc --remote gcs_models_remote
 
       - name: Deploy to Cloud Run
         run: |
