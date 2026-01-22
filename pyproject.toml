@@ -140,6 +140,14 @@ lint.ignore = [
 ]
 lint.pydocstyle.convention = "google"
 
+[tool.ruff.lint.isort]
+# Ensure consistent import sorting across all environments
+known-first-party = ["mlops_project"]
+# Explicitly mark common third-party packages to avoid misclassification
+known-third-party = ["wandb", "hydra", "pytorch_lightning", "torch", "omegaconf"]
+force-sort-within-sections = true
+split-on-trailing-comma = false
+
 [tool.coverage.run]
 omit = [
     "tests/*",
