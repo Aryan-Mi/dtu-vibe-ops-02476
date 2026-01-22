@@ -14,7 +14,7 @@ training:
 data:
   data_path: "data/raw/ham10000"
   num_classes: 7             # HAM10000 has 7 classes
-  image_size: 224
+  image_size: 240            # Updated to match EfficientNet-B1 model (was 224 for B0)
   batch_size: 32
   num_workers: 4
   # Subsampling (optional) - set to null to use full dataset

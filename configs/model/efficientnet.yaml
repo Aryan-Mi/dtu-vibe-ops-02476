@@ -3,7 +3,7 @@ name: "EfficientNet"
 
 # Model parameters (match EfficientNet.__init__ signature)
 num_classes: ${data.num_classes}  # Interpolated from main config
-model_size: "b0"                  # Options: b0, b1, b2, b3, b4, b5, b6, b7
+model_size: "b1"                  # Options: b0, b1, b2, b3, b4, b5, b6, b7 (b1 requires 240x240)
 lr: 0.0001                        # Lower learning rate for pretrained models
 use_bn: true
 pretrained: true

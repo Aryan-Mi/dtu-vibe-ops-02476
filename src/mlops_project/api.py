@@ -14,6 +14,7 @@ from PIL import Image
 from pydantic import BaseModel
 
 from mlops_project.data import CLASS_TO_DX, get_transforms
+from mlops_project.model import INPUT_SIZE
 
 if TYPE_CHECKING:
     from torch import Tensor
@@ -222,6 +223,15 @@ async def lifespan(app: FastAPI):
     try:
         runtime_config = load_config()
         IMAGE_SIZE = runtime_config.data.image_size
+
+        # Auto-adjust image size for EfficientNet model variants (same as training)
+        if runtime_config.model.name == "EfficientNet" and hasattr(runtime_config.model, "model_size"):
+            model_size = runtime_config.model.model_size
+            if model_size in INPUT_SIZE:
+                IMAGE_SIZE = INPUT_SIZE[model_size]
+                print(f"Auto-adjusted image_size to {IMAGE_SIZE} for EfficientNet {model_size}")
+            else:
+                print(f"Warning: Unknown EfficientNet model size '{model_size}', using config value {IMAGE_SIZE}")
 
         # Try to pull models from DVC if needed
         pull_models_dvc()
