@@ -8,10 +8,18 @@ on:
       - main
     paths:
       - 'src/mlops_project/api.py'
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: 'GCP Project ID'
+        required: false
+      region:
+        description: 'GCP Region'
+        required: false
 
 env:
-  PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'vibeops-483814' }}
-  REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID || github.event.inputs.project_id || 'vibeops-483814' }}
+  REGION: ${{ vars.GCP_REGION || github.event.inputs.region || 'europe-west1' }}
   ARTIFACT_REGISTRY: ${{ vars.GCP_ARTIFACT_REGISTRY || 'dtu-vibe-ops' }}
 
 jobs:
