@@ -49,11 +49,11 @@ dev = [
     "invoke==2.2.0",
     "mkdocs-material==9.4.6",
     "mkdocs==1.6.1",
+    "mkdocstrings[python]>=0.26.0",
     "pre-commit==4.1.0",
     "pytest==8.3.4",
     "pytest-cov==6.0.0",
     "ruff==0.14.11",
-    "mkdocstrings-python==1.12.2",
 ]
 
 

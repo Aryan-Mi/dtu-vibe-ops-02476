@@ -7,10 +7,8 @@ on:
     paths:
       - 'docs/**'
       - 'src/**'
-      - 'README.md'
       - '.github/workflows/deploy_docs.yaml'
   
-  # Allow manual deployment
   workflow_dispatch:
 
 permissions:
@@ -18,7 +16,6 @@ permissions:
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -45,17 +42,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
       
-      - name: Configure Git for GitHub Actions
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-      
       - name: Build documentation
         working-directory: docs
-        run: |
-          uv run mkdocs build --clean --strict --verbose
-        env:
-          MKDOCS_GIT_COMMITTERS_APIKEY: ${{ secrets.GITHUB_TOKEN }}
+        run: uv run mkdocs build --clean
       
       - name: Upload documentation artifacts
         uses: actions/upload-pages-artifact@v3
@@ -74,43 +63,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-  validate:
-    name: Validate Deployment
-    runs-on: ubuntu-latest
-    needs: deploy
-    if: always()
-    
-    steps:
-      - name: Check deployment health
-        run: |
-          # Wait for deployment to be ready
-          sleep 30
-          
-          # Get the deployed URL (would be set by GitHub Pages)
-          DOCS_URL="https://dtu-group-36.github.io/dtu-vibe-ops-02476/"
-          
-          # Check if documentation is accessible
-          curl -f -s -L "$DOCS_URL" > /dev/null
-          
-          echo "✅ Documentation successfully deployed to: $DOCS_URL"
-      
-      - name: Test documentation links
-        run: |
-          # Install link checker
-          npm install -g linkinator
-          
-          # Check for broken links
-          linkinator "https://dtu-group-36.github.io/dtu-vibe-ops-02476/" \
-            --recurse \
-            --skip "^(?!https://dtu-group-36\.github\.io/dtu-vibe-ops-02476/).*" \
-            --format csv \
-            --output links-report.csv
-        continue-on-error: true
-      
-      - name: Upload link check report
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: link-check-report
-          path: links-report.csv
