@@ -1,23 +1,158 @@
-site_name: mlops_project
-site_author: Group-36
+site_name: MLOps Skin Lesion Classification Pipeline
+site_description: End-to-end MLOps pipeline for skin lesion classification using PyTorch Lightning, Hydra, and modern ML practices
+site_author: DTU Group 36
+site_url: https://group36.github.io/dtu-vibe-ops-02476
+
+repo_name: DTU-Group-36/dtu-vibe-ops-02476
+repo_url: https://github.com/DTU-Group-36/dtu-vibe-ops-02476
+edit_uri: edit/main/docs/source/
+
 docs_dir: source
 
 theme:
-  language: en
   name: material
+  language: en
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      primary: blue grey
+      accent: deep orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - scheme: slate
+      primary: blue grey
+      accent: deep orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  
   features:
-    - content.code.copy
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
     - content.code.annotate
+    - content.code.copy
+    - content.code.select
+    - content.tabs.link
+    - content.tooltips
+    - header.autohide
+    - navigation.expand
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+
+  font:
+    text: Roboto
+    code: Roboto Mono
+
+  icon:
+    logo: material/microscope
+    repo: fontawesome/brands/github
+    edit: material/pencil
+    view: material/eye
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/DTU-Group-36/dtu-vibe-ops-02476
+    - icon: fontawesome/brands/docker
+      link: https://hub.docker.com/
+  analytics:
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/emoticon-happy-outline
+          name: This page was helpful
+          data: 1
+          note: >-
+            Thanks for your feedback!
+        - icon: material/emoticon-sad-outline
+          name: This page could be improved
+          data: 0
+          note: >-
+            Thanks for your feedback! Help us improve this page by
+            using our <a href="..." target="_blank" rel="noopener">feedback form</a>.
 
 plugins:
-  - search
-  - mkdocstrings:
-      handlers:
-        python:
-          options:
-            show_root_heading: true
-            separate_signature: true
-            show_signature_annotations: true
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+            
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: DTU-Group-36
+      repo: dtu-vibe-ops-02476
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+extra_javascript:
+  - assets/javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 nav:
   - Home: index.md
+  - Getting Started:
+    - Installation: installation.md
+    - Quick Start: getting-started.md
+  - System Architecture: architecture.md
+  - User Guide:
+    - Training Models: user-guide/training.md
+    - Model Evaluation: user-guide/evaluation.md
+    - Running Inference: user-guide/inference.md
+    - Deployment: user-guide/deployment.md
+  - Examples:
+    - Basic Training: examples/basic-training.md
+    - Custom Configuration: examples/custom-config.md
+    - API Usage: examples/api-usage.md
+  - API Reference:
+    - Models: api-reference/models.md
+    - Data Handling: api-reference/data.md
+    - Training: api-reference/training.md
+    - API Endpoints: api-reference/api.md
+  - Development:
+    - Contributing: development/contributing.md
+    - Testing: development/testing.md
+    - CI/CD Pipeline: development/ci-cd.md
