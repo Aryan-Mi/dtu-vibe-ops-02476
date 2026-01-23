@@ -4,10 +4,9 @@ This page provides a comprehensive overview of the MLOps Skin Lesion Classificat
 
 ## High-Level Architecture
 
-<div class="architecture-diagram">
-  <img src="assets/images/system-architecture.png" alt="System Architecture Diagram" />
-  <p><em>Complete MLOps pipeline architecture showing data flow, training, and deployment components</em></p>
-</div>
+![System Architecture Diagram](assets/images/system-architecture.png)
+
+*Complete MLOps pipeline architecture showing data flow, training, and deployment components*
 
 ## Core Components Overview
 
