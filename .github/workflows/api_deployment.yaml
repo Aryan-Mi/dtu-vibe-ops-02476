@@ -13,14 +13,35 @@ on:
       project_id:
         description: 'GCP Project ID'
         required: false
+        default: 'vibeops-483814'
       region:
         description: 'GCP Region'
         required: false
+        default: 'europe-west1'
+      artifact_registry:
+        description: 'GCP Artifact Registry name'
+        required: false
+        default: 'dtu-vibe-ops'
+      image_tag:
+        description: 'Docker image tag to deploy'
+        required: false
+        default: 'latest'
+      model_name:
+        description: 'Model name to use for inference'
+        required: false
+        type: choice
+        options:
+          - EfficientNet
+          - ResNet
+          - BaselineCNN
+        default: 'EfficientNet'
 
 env:
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID || github.event.inputs.project_id || 'vibeops-483814' }}
   REGION: ${{ vars.GCP_REGION || github.event.inputs.region || 'europe-west1' }}
-  ARTIFACT_REGISTRY: ${{ vars.GCP_ARTIFACT_REGISTRY || 'dtu-vibe-ops' }}
+  ARTIFACT_REGISTRY: ${{ vars.GCP_ARTIFACT_REGISTRY || github.event.inputs.artifact_registry || 'dtu-vibe-ops' }}
+  IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
+  MODEL_NAME: ${{ github.event.inputs.model_name || 'EfficientNet' }}
 
 jobs:
   api-update:
@@ -41,11 +62,12 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 10
 
-      - name: Wait for Inference Image to be pushed
+      - name: Wait for API Image to be pushed
+        if: github.event_name == 'push'
         uses: lewagon/wait-on-check-action@v1.3.4
         with:
           ref: ${{ github.sha }}
-          check-regexp: 'Build and Push Inference Docker Image'
+          check-regexp: 'Build and Push Train and API Docker Images'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 10
 
@@ -81,4 +103,39 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          uv run invoke deploy-to-cloud-run --project-id=${{ env.PROJECT_ID }} --region=${{ env.REGION }} --artifact-registry=${{ env.ARTIFACT_REGISTRY }}
+          # Use the API image built in CI or specified tag for manual deployments
+          IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/dtu-vibe-ops-02476-api:${IMAGE_TAG}"
+          
+          echo "Deploying image: $IMAGE_URI"
+          echo "Model: $MODEL_NAME"
+          
+          gcloud run deploy skin-lesion-api \
+            --image $IMAGE_URI \
+            --platform managed \
+            --region ${{ env.REGION }} \
+            --allow-unauthenticated \
+            --port 8080 \
+            --cpu 2 \
+            --memory 4Gi \
+            --timeout 300 \
+            --max-instances 10 \
+            --set-env-vars MODEL_NAME=${{ env.MODEL_NAME }} \
+            --quiet
+            
+      - name: Get Service URL
+        run: |
+          SERVICE_URL=$(gcloud run services describe skin-lesion-api --region=${{ env.REGION }} --format="value(status.url)")
+          echo "## 🚀 API Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service URL**: [$SERVICE_URL]($SERVICE_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: \`${{ env.IMAGE_TAG }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Model**: \`${{ env.MODEL_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Region**: \`${{ env.REGION }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project**: \`${{ env.PROJECT_ID }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test the API" >> $GITHUB_STEP_SUMMARY
+          echo "You can test the API endpoints:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Health Check**: [\`GET $SERVICE_URL/\`]($SERVICE_URL/)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Model Info**: [\`GET $SERVICE_URL/info\`]($SERVICE_URL/info)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Prediction**: \`POST $SERVICE_URL/inference\`" >> $GITHUB_STEP_SUMMARY

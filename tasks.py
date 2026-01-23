@@ -65,7 +65,7 @@ def create_demo_model(ctx: Context) -> None:
 def deploy_to_cloud_run(
     ctx: Context, project_id: str, region: str = "europe-west1", artifact_registry: str = "dtu-vibe-ops"
 ) -> None:
-    """Deploy API to Google Cloud Run."""
+    """Deploy API to Google Cloud Run using pre-built image from registry."""
     print(f"Deploying to project: {project_id}, region: {region}, registry: {artifact_registry}")
 
     # Configure Docker for Artifact Registry (suppress output)
@@ -75,22 +75,10 @@ def deploy_to_cloud_run(
         pty=not WINDOWS,
     )
 
-    # Tag locally with Artifact Registry format
-    image_name = f"{region}-docker.pkg.dev/{project_id}/{artifact_registry}/skin-lesion-api:latest"
+    # Use the latest API image from registry
+    image_name = f"{region}-docker.pkg.dev/{project_id}/{artifact_registry}/dtu-vibe-ops-02476-api:latest"
 
-    # Build image (suppress most output, only show errors and final status)
-    print("Building Docker image...")
-    ctx.run(
-        f"docker build -t {image_name} -f dockerfiles/api.dockerfile . --quiet",
-        echo=False,
-        pty=not WINDOWS,
-    )
-    print("✓ Image built successfully")
-
-    # Push to Artifact Registry (suppress verbose output)
-    print("Pushing image to Artifact Registry...")
-    ctx.run(f"docker push {image_name} --quiet", echo=False, pty=not WINDOWS)
-    print("✓ Image pushed successfully")
+    print(f"Deploying image: {image_name}")
 
     # Deploy to Cloud Run
     print("Deploying to Cloud Run...")
@@ -109,6 +97,16 @@ def deploy_to_cloud_run(
         "--allow-unauthenticated",
         "--port",
         "8080",
+        "--cpu",
+        "2",
+        "--memory",
+        "4Gi",
+        "--timeout",
+        "300",
+        "--max-instances",
+        "10",
+        "--set-env-vars",
+        "MODEL_NAME=EfficientNet",
         "--quiet",
     ]
 
