@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
@@ -192,11 +192,6 @@ def train_with_cfg(cfg: DictConfig) -> None:
 
     Args:
         cfg: Hydra configuration object
-        model_name: Name of the model being trained
-        subsample_percentage: Percentage of data used for subsampling, or None
-
-    Returns:
-        WandbLogger instance if enabled, None otherwise
     """
     # Auto-adjust image size for EfficientNet model variants
     if cfg.model.name == "EfficientNet" and hasattr(cfg.model, "model_size"):
@@ -215,6 +210,80 @@ def train_with_cfg(cfg: DictConfig) -> None:
     print("\nResolved Configuration:")
     print(OmegaConf.to_yaml(cfg))
     print("=" * 80)
+
+    # Step 1: Load data with optional subsampling
+    train_loader, val_loader, _ = load_data(cfg)
+
+    # Get subsample percentage for logging
+    subsample_percentage = cfg.data.subsample_percentage
+
+    # Step 2: Create model
+    print(f"\n[2/5] Initializing model...")
+    model = create_model(cfg)
+    model_name = cfg.model.name
+    print_model_info(model_name, cfg)
+
+    # Define output directory
+    output_dir = f"models/{model_name}"
+
+    # Step 3: Initialize W&B logger (if enabled)
+    wandb_logger = initialize_wandb_logger(cfg, model_name, subsample_percentage)
+    use_wandb = wandb_logger is not None
+
+    print("\n[4/5] Training model...")
+    try:
+        _, training_metrics = train_model(
+            model=model,
+            train_loader=train_loader,
+            val_loader=val_loader,
+            model_name=model_name,
+            epochs=cfg.training.max_epochs,
+            patience=cfg.training.patience,
+            output_dir=output_dir,
+            wandb_logger=wandb_logger,
+        )
+    except Exception as e:  # noqa: BLE001
+        print(f"  ERROR: Failed to train {model_name}: {str(e)}")
+        if use_wandb:
+            wandb.finish()
+        return
+
+    print("\n[5/5] Saving results...")
+    print("\n" + "=" * 80)
+    print("TRAINING SUMMARY")
+    print("=" * 80)
+    print(f"\nModel: {model_name}")
+    print(f"Validation Loss: {training_metrics['best_val_loss']:.4f}")
+    print("=" * 80)
+
+    checkpoint_path = Path(training_metrics["checkpoint_path"])
+    image_size = int(cfg.data.image_size)
+
+    # Export the trained model to ONNX format
+    onnx_model_path = export_model_to_onnx(model, checkpoint_path, image_size)
+
+    # Save training results (models will be tracked with DVC after training)
+    results_path = save_training_results(
+        cfg=cfg,
+        model_name=model_name,
+        training_metrics=training_metrics,
+        checkpoint_path=checkpoint_path,
+        onnx_model_path=onnx_model_path,
+        checkpoint_gcs_path=None,
+        onnx_gcs_path=None,
+        results_gcs_path=None,
+        output_dir=output_dir,
+    )
+
+    print(f"\n✓ Results saved to: {results_path}")
+    print(f"✓ Model checkpoint: {training_metrics['checkpoint_path']}")
+    print(f"✓ ONNX model exported to: {onnx_model_path}")
+    print("\n📦 Models saved locally. They will be tracked with DVC and pushed to GCS by the entrypoint script.")
+
+    # Finish W&B run
+    if use_wandb:
+        wandb.finish()
+        print("\nW&B run finished. View results at: https://wandb.ai")
 
 
 def export_model_to_onnx(model: pl.LightningModule, checkpoint_path: Path, image_size: int) -> Path:
@@ -395,65 +464,6 @@ def print_model_info(model_name: str, cfg: DictConfig) -> None:
         print(f"    Pretrained: {cfg.model.pretrained}")
         print(f"    Freeze backbone: {cfg.model.freeze_backbone}")
 
-    # Step 3: Initialize W&B logger (if enabled)
-    wandb_logger = initialize_wandb_logger(cfg, model_name, subsample_percentage)
-    use_wandb = wandb_logger is not None
-
-    print("\n[4/5] Training model...")
-    try:
-        _, training_metrics = train_model(
-            model=model,
-            train_loader=train_loader,
-            val_loader=val_loader,
-            model_name=model_name,
-            epochs=cfg.training.max_epochs,
-            patience=cfg.training.patience,
-            output_dir=output_dir,
-            wandb_logger=wandb_logger,
-        )
-    except Exception as e:  # noqa: BLE001
-        print(f"  ERROR: Failed to train {model_name}: {str(e)}")
-        if use_wandb:
-            wandb.finish()
-        return
-
-    print("\n[5/5] Saving results...")
-    print("\n" + "=" * 80)
-    print("TRAINING SUMMARY")
-    print("=" * 80)
-    print(f"\nModel: {model_name}")
-    print(f"Validation Loss: {training_metrics['best_val_loss']:.4f}")
-    print("=" * 80)
-
-    checkpoint_path = Path(training_metrics["checkpoint_path"])
-    image_size = int(cfg.data.image_size)
-
-    # Export the trained model to ONNX format
-    onnx_model_path = export_model_to_onnx(model, checkpoint_path, image_size)
-
-    # Save training results (models will be tracked with DVC after training)
-    results_path = save_training_results(
-        cfg=cfg,
-        model_name=model_name,
-        training_metrics=training_metrics,
-        checkpoint_path=checkpoint_path,
-        onnx_model_path=onnx_model_path,
-        checkpoint_gcs_path=None,
-        onnx_gcs_path=None,
-        results_gcs_path=None,
-        output_dir=output_dir,
-    )
-
-    print(f"\n✓ Results saved to: {results_path}")
-    print(f"✓ Model checkpoint: {training_metrics['checkpoint_path']}")
-    print(f"✓ ONNX model exported to: {onnx_model_path}")
-    print("\n📦 Models saved locally. They will be tracked with DVC and pushed to GCS by the entrypoint script.")
-
-    # Finish W&B run
-    if use_wandb:
-        wandb.finish()
-        print("\nW&B run finished. View results at: https://wandb.ai")
-
 
 @hydra.main(version_base=None, config_path="../../configs", config_name="config")
 def train(cfg: DictConfig) -> None:
@@ -467,7 +477,8 @@ def train(cfg: DictConfig) -> None:
     # Check if running as part of a W&B sweep
     if wandb.run is not None and wandb.run.sweep_id is not None:
         # Update config with sweep parameters from wandb
-        cfg = OmegaConf.merge(cfg, OmegaConf.create(dict(wandb.config)))
+        sweep_config = OmegaConf.create(dict(wandb.config))
+        cfg = cast("DictConfig", OmegaConf.merge(cfg, sweep_config))
 
     train_with_cfg(cfg)
 
