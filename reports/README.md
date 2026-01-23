@@ -317,7 +317,6 @@ For speed, we rely on dependency caching via UV and GitHub Actions caching for P
 
 --- Experiments are configured using Hydra for flexible and reproducible individual runs. A base config.yaml file defines the general experiment settings, such as the batch size, image size and maximum number of epochs for training. When launching the train.py script, we can specify the model via a command-line argument (uv run src/mlops_project/train.py), which Hydra used to dynamically load the corresponding YAML files.
 For hyperparameter tuning, we defined a sweeps.yaml file to set up sweeps in Wandb. When initiating a sweep, the training script would load both the standard Hydra configuration and the sweep parameters. The relevant sections of the Hydra config are then overwritten with the sampled values from the sweep, enabling efficient exploration of hyperparameter spaces while preserving the underlying structure and defaults from the base configuration.
-`![my_image](figures/<image>.<extension>)`
  ---
 
 ### Question 13
@@ -351,8 +350,8 @@ For hyperparameter tuning, we defined a sweeps.yaml file to set up sweeps in Wan
 > Answer:
 
 --- In the first screenshot, we tracked the validation loss, validation accuracy, training loss, and training accuracy of various models in order to find which model was the best performing. These values allowed us to measure which models best predicted the presence of cancer in a given image of a skin lesion. We tested the models EfficientNet, a baseline CNN, and ResNet, and found that the optimal values were with EfficientNet. As can be observed in the second screenshot, once we established the model we wanted to use (EfficientNet), we finetuned the parameters in further experiments. Tracking the same variables, we found the parameters which optimized the model. 
-`![my_image](figures/<image>.<extension>)`
-`![my_image](figures/<image>.<extension>)`---
+`![various_model_tests](figures/various_model_tests.png)`
+`![finetuning_model_tests](figures/finetuning_model_tests.png)`---
 
 ### Question 15
 
@@ -634,7 +633,7 @@ Link to the website: https://vibe-opsy.aryan-mi.workers.dev/ ---
 The data pipeline starts with raw images stored in GCS buckets, version-controlled through DVC. Our data processing includes validation, transformation, and subsampling steps to prepare training data. Model training is configured using Hydra for managing hyperparameters, which also supports Weights and Biases sweeps, with all experiments logged to Wandb for tracking metrics, losses, and model performance comparisons.
 Trained models are stored in DVC-managed buckets and converted to ONNX format for optimized inference. The deployment architecture uses Docker containers that package the FastAPI application with the trained model, that can be triggered by change detecting a in api.py file or manually in GitHub actions.
 The inference service exposes a REST API with endpoints for health checks and predictions. When users submit skin lesion images, the API preprocesses them (resizing to 224x224, normalization, RGB conversion), runs inference using the ONNX model, and returns predictions including the disease class, confidence scores, probabilities for all seven classes, and a binary cancer/non-cancer classification.
- `![my_image](figures/<image>.<extension>)` ---
+ `![system-architecture](figures/system-architecture.png)` ---
 
 ### Question 30
 
