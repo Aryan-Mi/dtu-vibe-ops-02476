@@ -3,13 +3,13 @@
 # or
 # uv add typer markdown pydantic loguru
 
-import re
 from pathlib import Path
+import re
 
+from loguru import logger
 import markdown
 import pydantic
 import typer
-from loguru import logger
 
 
 class Constraints(pydantic.BaseModel):
