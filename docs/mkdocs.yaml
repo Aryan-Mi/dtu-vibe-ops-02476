@@ -1,23 +1,110 @@
-site_name: mlops_project
-site_author: Group-36
+site_name: MLOps Skin Lesion Classification
+site_description: MLOps pipeline for skin lesion classification using PyTorch Lightning
+site_author: DTU Group 36
+site_url: https://aryan-mi.github.io/dtu-vibe-ops-02476
+
+repo_name: Aryan-Mi/dtu-vibe-ops-02476
+repo_url: https://github.com/Aryan-Mi/dtu-vibe-ops-02476
+edit_uri: edit/main/docs/source/
+
 docs_dir: source
 
 theme:
-  language: en
   name: material
+  palette:
+    - scheme: default
+      primary: blue grey
+      accent: deep orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue grey
+      accent: deep orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  
   features:
     - content.code.copy
-    - content.code.annotate
+    - content.code.select
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - toc.follow
+
+  font:
+    text: Roboto
+    code: Roboto Mono
+
+  icon:
+    logo: material/microscope
+    repo: fontawesome/brands/github
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Aryan-Mi/dtu-vibe-ops-02476
 
 plugins:
   - search
   - mkdocstrings:
+      default_handler: python
       handlers:
         python:
+          paths: [../src]
           options:
+            docstring_style: google
+            heading_level: 3
             show_root_heading: true
-            separate_signature: true
-            show_signature_annotations: true
+            show_source: false
+            members_order: source
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_div_format
+  - pymdownx.tabbed:
+      alternate_style: true
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+extra_javascript:
+  - https://unpkg.com/mermaid@10/dist/mermaid.min.js
+  - assets/javascripts/mermaid.js
 
 nav:
   - Home: index.md
+  - Getting Started:
+    - Installation: installation.md
+    - Quick Start: getting-started.md
+  - Architecture: architecture.md
+  - User Guide:
+    - Training: user-guide/training.md
+    - Evaluation: user-guide/evaluation.md
+    - Inference: user-guide/inference.md
+    - Deployment: user-guide/deployment.md
+  - API Reference:
+    - Models: api-reference/models.md
+    - Data: api-reference/data.md
+    - Training: api-reference/training.md
+    - API: api-reference/api.md
+  - Development:
+    - Contributing: development/contributing.md
+    - Testing: development/testing.md
+    - CI/CD: development/ci-cd.md

@@ -1,0 +1,163 @@
+/* Custom styles for MLOps project documentation */
+
+:root {
+  --md-primary-fg-color: #37474f;
+  --md-primary-fg-color--light: #62727b;
+  --md-primary-fg-color--dark: #102027;
+  --md-accent-fg-color: #ff5722;
+  --md-accent-fg-color--transparent: #ff572210;
+}
+
+/* Custom styling for code blocks */
+.highlight .filename {
+  background: var(--md-code-bg-color);
+  border-bottom: 0.05rem solid var(--md-default-fg-color--lightest);
+  border-radius: 0.1rem 0.1rem 0 0;
+  color: var(--md-default-fg-color--light);
+  display: block;
+  font-size: 0.85em;
+  font-weight: 700;
+  margin: 0 0 0 0;
+  padding: 0.5rem 1.2rem;
+}
+
+/* Custom styling for admonitions */
+.md-typeset .admonition.note,
+.md-typeset details.note {
+  border-color: #448aff;
+}
+
+.md-typeset .admonition.tip,
+.md-typeset details.tip {
+  border-color: #00c853;
+}
+
+.md-typeset .admonition.warning,
+.md-typeset details.warning {
+  border-color: #ff9100;
+}
+
+/* Custom styling for API documentation */
+.doc-section {
+  border-left: 0.2rem solid var(--md-accent-fg-color);
+  margin: 1.6rem 0;
+  padding: 0 0.8rem;
+}
+
+/* Enhanced table styling */
+.md-typeset table:not([class]) {
+  border: 0.05rem solid var(--md-typeset-table-color);
+  border-radius: 0.1rem;
+}
+
+.md-typeset table:not([class]) th {
+  background: var(--md-accent-fg-color--transparent);
+  border-bottom: 0.05rem solid var(--md-typeset-table-color);
+  color: var(--md-accent-fg-color);
+  font-weight: 700;
+}
+
+/* Custom hero section for homepage */
+.hero {
+  background: linear-gradient(135deg, var(--md-primary-fg-color) 0%, var(--md-primary-fg-color--dark) 100%);
+  color: white;
+  padding: 2rem 0;
+  margin: -1.5rem -1.5rem 2rem -1.5rem;
+  text-align: center;
+}
+
+.hero h1 {
+  color: white !important;
+  margin: 0;
+  font-size: 2.5em;
+}
+
+.hero p {
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0.5rem 0 0 0;
+  font-size: 1.2em;
+}
+
+/* Quick links styling */
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  margin: 1.5rem 0;
+}
+
+.card {
+  background: var(--md-default-bg-color);
+  border: 0.05rem solid var(--md-default-fg-color--lightest);
+  border-radius: 0.1rem;
+  padding: 1rem;
+  transition: box-shadow 0.2s;
+}
+
+.card:hover {
+  box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.1);
+}
+
+.card h3 {
+  color: var(--md-accent-fg-color);
+  margin: 0 0 0.5rem 0;
+}
+
+.card p {
+  margin: 0;
+}
+
+/* Architecture diagram styling */
+.architecture-diagram {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+.architecture-diagram img {
+  max-width: 100%;
+  height: auto;
+  border: 0.05rem solid var(--md-default-fg-color--lightest);
+  border-radius: 0.2rem;
+  box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.1);
+}
+
+/* Code example styling */
+.code-example {
+  margin: 1rem 0;
+}
+
+.code-example .title {
+  background: var(--md-code-bg-color);
+  border: 0.05rem solid var(--md-default-fg-color--lightest);
+  border-bottom: none;
+  border-radius: 0.1rem 0.1rem 0 0;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.8em;
+  font-weight: 700;
+  padding: 0.4rem 0.8rem;
+}
+
+/* Feature badge styling */
+.feature-badge {
+  background: var(--md-accent-fg-color--transparent);
+  border: 0.05rem solid var(--md-accent-fg-color);
+  border-radius: 1rem;
+  color: var(--md-accent-fg-color);
+  display: inline-block;
+  font-size: 0.7em;
+  font-weight: 700;
+  margin: 0.2rem;
+  padding: 0.2rem 0.6rem;
+  text-transform: uppercase;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 76.1875em) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .hero h1 {
+    font-size: 2em;
+  }
+}
