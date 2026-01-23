@@ -229,8 +229,7 @@ The frontend code is stored separately in another repository (https://github.com
 -Subsampling functionality (17 tests): data preprocessing, distribution maintenance, reproducibility, error handling.
 -API endpoints (11 tests): health checks, prediction endpoints, image format handling, cancer detection logic.
 -Model architectures (5 tests): input/output shape validation for BaselineCNN, ResNet, and EfficientNet.
--Data loading (2 tests): dataset initialization and comprehensive data loading validation.
- ---
+-Data loading (2 tests): dataset initialization and comprehensive data loading validation. ---
 
 ### Question 8
 
