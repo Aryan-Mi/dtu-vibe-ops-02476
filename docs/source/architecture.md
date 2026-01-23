@@ -8,16 +8,15 @@ Overview of the MLOps Skin Lesion Classification Pipeline architecture.
 
 ## Model Architecture
 
-We implement a three-tier model architecture:
+We use **EfficientNet** with transfer learning for skin lesion classification:
 
-### 1. BaselineCNN
-Simple CNN with convolutional blocks for baseline performance.
+- **Backbone**: EfficientNet-B0/B3 pretrained on ImageNet
+- **Classification Head**: Custom fully-connected layers for binary classification
+- **Training**: Fine-tuning with PyTorch Lightning
 
-### 2. ResNet
-Residual network with skip connections for better gradient flow.
+## Training Pipeline
 
-### 3. EfficientNet
-State-of-the-art transfer learning with ImageNet pretrained weights.
+![Training Pipeline](assets/images/training-pipeline.png)
 
 ## Data Pipeline
 
@@ -28,21 +27,6 @@ graph LR
     C --> D[Local Cache]
     D --> E[DataLoader]
     E --> F[Model Training]
-```
-
-## Training Pipeline
-
-```mermaid
-graph TD
-    A[Config - Hydra] --> B[Data Loading]
-    B --> C[Model Creation]
-    C --> D[PyTorch Lightning Trainer]
-    D --> E[Training Loop]
-    E --> F[Validation]
-    F --> G{Early Stopping?}
-    G -->|No| E
-    G -->|Yes| H[Best Checkpoint]
-    H --> I[ONNX Export]
 ```
 
 ## Inference Pipeline
@@ -87,7 +71,7 @@ graph TD
 ```
 dtu-vibe-ops-02476/
 ├── src/mlops_project/     # Source code
-│   ├── model.py           # Model architectures
+│   ├── model.py           # EfficientNet model
 │   ├── data.py            # Dataset handling
 │   ├── train.py           # Training script
 │   ├── evaluate.py        # Evaluation

@@ -6,13 +6,12 @@
 uv run python -m mlops_project.train model=efficientnet
 ```
 
-## Model Options
+## EfficientNet Variants
 
-| Model | Command | Description |
-|-------|---------|-------------|
-| EfficientNet | `model=efficientnet` | Best accuracy, transfer learning |
-| ResNet | `model=resnet` | Good balance of speed/accuracy |
-| BaselineCNN | `model=baseline` | Fast, simple baseline |
+| Variant | Command | Description |
+|---------|---------|-------------|
+| EfficientNet-B0 | `model=efficientnet model.variant=b0` | Smaller, faster |
+| EfficientNet-B3 | `model=efficientnet model.variant=b3` | Better accuracy |
 
 ## Hyperparameters
 

@@ -8,10 +8,14 @@ This pipeline classifies dermatoscopic images of skin lesions to estimate **mali
 
 ### Key Features
 
-- **Three-Tier Architecture**: Baseline CNN → ResNet → EfficientNet
+- **EfficientNet Model**: Transfer learning with ImageNet pretrained weights
 - **Modern ML Stack**: PyTorch Lightning, Hydra, Weights & Biases
 - **Complete MLOps Pipeline**: DVC versioning, CI/CD, containerized deployment
 - **Production Ready**: FastAPI server, Google Cloud deployment
+
+## Training Pipeline
+
+![Training Pipeline](assets/images/training-pipeline.png)
 
 ## Quick Start
 
