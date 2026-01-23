@@ -218,7 +218,7 @@ def train_with_cfg(cfg: DictConfig) -> None:
     subsample_percentage = cfg.data.subsample_percentage
 
     # Step 2: Create model
-    print(f"\n[2/5] Initializing model...")
+    print("\n[2/5] Initializing model...")
     model = create_model(cfg)
     model_name = cfg.model.name
     print_model_info(model_name, cfg)
