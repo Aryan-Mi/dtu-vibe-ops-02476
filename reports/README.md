@@ -50,71 +50,70 @@ curriculum in this course. Therefore, we do not expect at all that you have chec
 The parenthesis at the end indicates what module the bullet point is related to. Please be honest in your answers, we
 will check the repositories and the code to verify your answers.
 
-### Week 1
+## Week 1
 
-* [ ] Create a git repository (M5)
-* [ ] Make sure that all team members have write access to the GitHub repository (M5)
-* [ ] Create a dedicated environment for you project to keep track of your packages (M2)
-* [ ] Create the initial file structure using cookiecutter with an appropriate template (M6)
-* [ ] Fill out the `data.py` file such that it downloads whatever data you need and preprocesses it (if necessary) (M6)
-* [ ] Add a model to `model.py` and a training procedure to `train.py` and get that running (M6)
-* [ ] Remember to either fill out the `requirements.txt`/`requirements_dev.txt` files or keeping your
-    `pyproject.toml`/`uv.lock` up-to-date with whatever dependencies that you are using (M2+M6)
-* [ ] Remember to comply with good coding practices (`pep8`) while doing the project (M7)
-* [ ] Do a bit of code typing and remember to document essential parts of your code (M7)
-* [ ] Setup version control for your data or part of your data (M8)
-* [ ] Add command line interfaces and project commands to your code where it makes sense (M9)
-* [ ] Construct one or multiple docker files for your code (M10)
-* [ ] Build the docker files locally and make sure they work as intended (M10)
-* [ ] Write one or multiple configurations files for your experiments (M11)
-* [ ] Used Hydra to load the configurations and manage your hyperparameters (M11)
-* [ ] Use profiling to optimize your code (M12)
-* [ ] Use logging to log important events in your code (M14)
-* [ ] Use Weights & Biases to log training progress and other important metrics/artifacts in your code (M14)
-* [ ] Consider running a hyperparameter optimization sweep (M14)
-* [ ] Use PyTorch-lightning (if applicable) to reduce the amount of boilerplate in your code (M15)
+- [x] Create a git repository (M5)
+- [x] Make sure that all team members have write access to the GitHub repository (M5)
+- [x] Create a dedicated environment for you project to keep track of your packages (M2)
+- [x] Create the initial file structure using cookiecutter with an appropriate template (M6)
+- [x] Fill out the `data.py` file such that it downloads whatever data you need and preprocesses it (if necessary) (M6)
+- [x] Add a model to `model.py` and a training procedure to `train.py` and get that running (M6)
+- [x] Remember to fill out the `requirements.txt` and `requirements_dev.txt` file with whatever dependencies that you
+    are using (M2+M6)
+- [x] Remember to comply with good coding practices (`pep8`) while doing the project (M7)
+- [x] Do a bit of code typing and remember to document essential parts of your code (M7)
+- [x] Setup version control for your data or part of your data (M8)
+- [x] Add command line interfaces and project commands to your code where it makes sense (M9)
+- [x] Construct one or multiple docker files for your code (M10)
+- [x] Build the docker files locally and make sure they work as intended (M10)
+- [x] Write one or multiple configurations files for your experiments (M11)
+- [x] Used Hydra to load the configurations and manage your hyperparameters (M11)
+- [ ] Use profiling to optimize your code (M12)
+- [x] Use logging to log important events in your code (M14)
+- [x] Use Weights & Biases to log training progress and other important metrics/artifacts in your code (M14)
+- [x] Consider running a hyperparameter optimization sweep (M14)
+- [x] Use PyTorch-lightning (if applicable) to reduce the amount of boilerplate in your code (M15)
 
-### Week 2
+## Week 2
 
-* [ ] Write unit tests related to the data part of your code (M16)
-* [ ] Write unit tests related to model construction and or model training (M16)
-* [ ] Calculate the code coverage (M16)
-* [ ] Get some continuous integration running on the GitHub repository (M17)
-* [ ] Add caching and multi-os/python/pytorch testing to your continuous integration (M17)
-* [ ] Add a linting step to your continuous integration (M17)
-* [ ] Add pre-commit hooks to your version control setup (M18)
-* [ ] Add a continues workflow that triggers when data changes (M19)
-* [ ] Add a continues workflow that triggers when changes to the model registry is made (M19)
-* [ ] Create a data storage in GCP Bucket for your data and link this with your data version control setup (M21)
-* [ ] Create a trigger workflow for automatically building your docker images (M21)
-* [ ] Get your model training in GCP using either the Engine or Vertex AI (M21)
-* [ ] Create a FastAPI application that can do inference using your model (M22)
-* [ ] Deploy your model in GCP using either Functions or Run as the backend (M23)
-* [ ] Write API tests for your application and setup continues integration for these (M24)
-* [ ] Load test your application (M24)
-* [ ] Create a more specialized ML-deployment API using either ONNX or BentoML, or both (M25)
-* [ ] Create a frontend for your API (M26)
+- [x] Write unit tests related to the data part of your code (M16)
+- [x] Write unit tests related to model construction and or model training (M16)
+- [x] Calculate the code coverage (M16)
+- [x] Get some continuous integration running on the GitHub repository (M17)
+- [x] Add caching and multi-os/python/pytorch testing to your continuous integration (M17)
+- [x] Add a linting step to your continuous integration (M17)
+- [x] Add pre-commit hooks to your version control setup (M18)
+- [x] Add a continues workflow that triggers when data changes (M19)
+- [ ] Add a continues workflow that triggers when changes to the model registry is made (M19)
+- [x] Create a data storage in GCP Bucket for your data and link this with your data version control setup (M21)
+- [x] Create a trigger workflow for automatically building your docker images (M21)
+- [ ] Get your model training in GCP using either the Engine or Vertex AI (M21)
+- [x] Create a FastAPI application that can do inference using your model (M22)
+- [x] Deploy your model in GCP using either Functions or Run as the backend (M23)
+- [x] Write API tests for your application and setup continues integration for these (M24)
+- [ ] Load test your application (M24)
+- [x] Create a more specialized ML-deployment API using either ONNX or BentoML, or both (M25)
+- [x] Create a frontend for your API (M26)
 
-### Week 3
+## Week 3
 
-* [ ] Check how robust your model is towards data drifting (M27)
-* [ ] Setup collection of input-output data from your deployed application (M27)
-* [ ] Deploy to the cloud a drift detection API (M27)
-* [ ] Instrument your API with a couple of system metrics (M28)
-* [ ] Setup cloud monitoring of your instrumented application (M28)
-* [ ] Create one or more alert systems in GCP to alert you if your app is not behaving correctly (M28)
-* [ ] If applicable, optimize the performance of your data loading using distributed data loading (M29)
-* [ ] If applicable, optimize the performance of your training pipeline by using distributed training (M30)
-* [ ] Play around with quantization, compilation and pruning for you trained models to increase inference speed (M31)
+- [ ] Check how robust your model is towards data drifting (M27)
+- [ ] Deploy to the cloud a drift detection API (M27)
+- [ ] Instrument your API with a couple of system metrics (M28)
+- [x] Setup cloud monitoring of your instrumented application (M28)
+- [x] Create one or more alert systems in GCP to alert you if your app is not behaving correctly (M28)
+- [ ] If applicable, optimize the performance of your data loading using distributed data loading (M29)
+- [ ] If applicable, optimize the performance of your training pipeline by using distributed training (M30)
+- [ ] Play around with quantization, compilation and pruning for you trained models to increase inference speed (M31)
 
-### Extra
+## Extra
 
-* [ ] Write some documentation for your application (M32)
-* [ ] Publish the documentation to GitHub Pages (M32)
-* [ ] Revisit your initial project description. Did the project turn out as you wanted?
-* [ ] Create an architectural diagram over your MLOps pipeline
-* [ ] Make sure all group members have an understanding about all parts of the project
-* [ ] Uploaded all your code to GitHub
+- [ ] Write some documentation for your application (M32)
+- [ ] Publish the documentation to GitHub Pages (M32)
+- [x] Revisit your initial project description. Did the project turn out as you wanted?
+- [x] Create an architectural diagram over your MLOps pipeline
+- [x] Make sure all group members have an understanding about all parts of the project
+- [x] Uploaded all your code to GitHub
 
 ## Group information
 
@@ -290,11 +289,11 @@ The frontend code is stored separately in another repository (https://github.com
 >
 > Answer:
 
---- We run continuous integration with GitHub Actions and keep it focused on quality checks, tests, and delivery. On every push and pull request to main, we run ruff for linting + formatting validation and pytest for unit tests with coverage reporting. Unit tests run with a matrix across Ubuntu, Windows, and macOS to catch OS-specific issues (currently on Python 3.12, but the setup can be extended to multiple Python versions if needed by simply providing a list of py versions).
-
-In addition, we use CI/CD steps for containerized delivery with Docker images (training and api) that are built and validated on PRs, and are pushed to Google Cloud Artifact Registry only after merges to main. Deployment of the API to Google Cloud Run is gated so it only runs after the unit tests and the required image build succeed. This prevents broken builds from reaching production.
-
-For speed, we rely on dependency caching via UV and GitHub Actions caching for Python tooling where relevant. ---
+--- We run continuous integration with GitHub Actions and keep it focused on quality checks, tests, and delivery. Our CI is organized into several workflow files: tests.yaml for unit testing, docker-build.yaml for container builds, and api_deployment.yaml for cloud deployment.
+On every push and pull request to main, we run ruff for linting and formatting validation, and pytest for unit tests with coverage reporting. Unit tests run with a matrix strategy across Ubuntu, Windows, and macOS to catch OS-specific issues. We currently test on Python 3.12, but the matrix setup can easily be extended to multiple Python versions by adding them to the version list.
+In addition, we use CI/CD steps for containerized delivery. Docker images for both training and inference are built and validated on pull requests, but are only pushed to Google Cloud Artifact Registry after merges to main. This ensures that only validated code reaches our container registry.
+Deployment of the API to Google Cloud Run is gated behind multiple checks — it only runs after unit tests pass across all operating systems and the required image builds succeed. This prevents broken builds from reaching production and ensures our deployed API is always based on tested, working code.
+For speed and efficiency, we rely on dependency caching via UV's lock file mechanism and GitHub Actions' built-in caching for Python tooling. This significantly reduces CI run times by avoiding redundant dependency installations. ---
 
 ## Running code and tracking experiments
 
@@ -313,8 +312,11 @@ For speed, we rely on dependency caching via UV and GitHub Actions caching for P
 >
 > Answer:
 
---- Experiments are configured using Hydra for flexible and reproducible individual runs. A base config.yaml file defines the general experiment settings, such as the batch size, image size and maximum number of epochs for training. When launching the train.py script, we can specify the model via a command-line argument (uv run src/mlops_project/train.py), which Hydra used to dynamically load the corresponding YAML files.
-For hyperparameter tuning, we defined a sweeps.yaml file to set up sweeps in Wandb. When initiating a sweep, the training script would load both the standard Hydra configuration and the sweep parameters. The relevant sections of the Hydra config are then overwritten with the sampled values from the sweep, enabling efficient exploration of hyperparameter spaces while preserving the underlying structure and defaults from the base configuration. ---
+--- Experiments are configured using Hydra for flexible, reproducible runs. A base config.yaml defines general settings like batch size, image size, and max epochs. When launching training, Hydra dynamically loads the corresponding model configuration:
+
+
+uv run src/mlops_project/train.py model=EfficientNet
+For hyperparameter tuning, we use a sweeps.yaml file integrated with Weights & Biases. When initiating a sweep, the training script loads both the Hydra configuration and sweep parameters, with sampled values overwriting the relevant config sections. This enables efficient hyperparameter exploration while preserving base configuration defaults. ---
 
 ### Question 13
 
@@ -346,7 +348,13 @@ For hyperparameter tuning, we defined a sweeps.yaml file to set up sweeps in Wan
 >
 > Answer:
 
---- In the first screenshot, we tracked the validation loss, validation accuracy, training loss, and training accuracy of various models in order to find which model was the best performing. These values allowed us to measure which models best predicted the presence of cancer in a given image of a skin lesion. We tested the models EfficientNet, a baseline CNN, and ResNet, and found that the optimal values were with EfficientNet. As can be observed in the second screenshot, once we established the model we wanted to use (EfficientNet), we finetuned the parameters in further experiments. Tracking the same variables, we found the parameters which optimized the model. 
+--- We used Weights & Biases (W&B) to track and visualize our experiments throughout the model development process.
+
+In the first screenshot, we tracked validation loss, validation accuracy, training loss, and training accuracy across different model architectures. These metrics are essential for evaluating model performance: training metrics show how well the model learns from the data, while validation metrics indicate generalization capability and help detect overfitting. We compared three architectures — EfficientNet, a baseline CNN, and ResNet — to determine which best predicted the presence of cancer in skin lesion images. The results showed that EfficientNet achieved the optimal balance of accuracy and loss, making it our chosen architecture.
+
+In the second screenshot, once we established EfficientNet as our preferred model, we conducted hyperparameter tuning experiments. We used W&B Sweeps to systematically explore different configurations including learning rate, batch size, and other training parameters. By tracking the same core metrics (validation loss, validation accuracy, training loss, and training accuracy), we could directly compare runs and identify which hyperparameter combinations yielded the best results.
+
+Tracking these specific metrics was crucial for our medical classification task. Validation accuracy directly measures our model's ability to correctly classify lesions, while monitoring both training and validation loss helps ensure the model generalizes well to unseen data rather than memorizing the training set. This is particularly important in healthcare applications where reliable predictions are essential. 
 `![various_model_tests](figures/various_model_tests.png)`
 `![finetuning_model_tests](figures/finetuning_model_tests.png)`---
 
@@ -656,4 +664,4 @@ We faced several Wandb challenges, particularly when it came to the model regist
 > *We have used ChatGPT to help debug our code. Additionally, we used GitHub Copilot to help write some of our code.*
 > Answer:
 
---- question 31 fill here ---
+--- Student (Aryan) s204489 was in charge of setting up the original cookie cutter, project, managing most of the merge conflicts (digital janitor), Hydra, general maintenance of errors, codebase configs like rules/linting/typing, implementing the frontend (after winning the competition), and unit tests for the api. Student (Wendy) s226465 was in charge of defining generic model architectures for the BaselineCNN and ResNet model, as well as creating the wrapper model for EfficientNet, setting up wandb sweeps, model fine tuning and selection using DTU’s HPC, fastAPI backend for inference, and supported in setting up docker images for train and inference. Student (Marvin) s175008 was in charge of the wandb pipeline setup, the initial data loading and cleaning setup, initial Google Cloud setup, and took 3rd place in a competition between 2 people. He also helped with refining and deploying the backend. Student (Vlad) s254355 was in charge of subsampling the data, Github actions, unit tests, general maintenance of errors, Docker, GCP, and system architecture diagrams. Student (Trinity) s252753 was responsible for initializing the training pipeline, managing merge conflicts, the wandb-dvc pipeline (see question 30), project management/task delegation, the api deployment github action, and various contributions to different tasks. We used Claude Pro, Cursor, and copilot. to help write some of our code, as well as grammatical checkers to clean up our report. ---
