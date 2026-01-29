@@ -24,7 +24,7 @@ dependencies = [
     "fastapi==0.115.6",
     "numpy>=1.24.0,<2.0.0",  # PyTorch 2.2.2 requires NumPy 1.x
     "torch==2.2.2",
-    "torchvision==0.17.2",
+    "torchvision==0.25.0",
     "lightning==2.2.1",  # Compatible with PyTorch 2.2.2
     "pytorch-lightning==2.2.1",  # Compatible with PyTorch 2.2.2
     "pandas>=2.3.3",
