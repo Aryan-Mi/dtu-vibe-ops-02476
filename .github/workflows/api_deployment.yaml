@@ -55,7 +55,7 @@ jobs:
 
     steps:
       - name: Wait for Unit Tests to complete
-        uses: lewagon/wait-on-check-action@v1.3.4
+        uses: lewagon/wait-on-check-action@v1.5.0
         with:
           ref: ${{ github.sha }}
           check-regexp: '^test \(.+\)$'
@@ -64,7 +64,7 @@ jobs:
 
       - name: Wait for API Image to be pushed
         if: github.event_name == 'push'
-        uses: lewagon/wait-on-check-action@v1.3.4
+        uses: lewagon/wait-on-check-action@v1.5.0
         with:
           ref: ${{ github.sha }}
           check-regexp: 'Build and Push Train and API Docker Images'
