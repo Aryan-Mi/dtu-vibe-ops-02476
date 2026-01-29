@@ -1438,7 +1438,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.24.0,<2.0.0" },
     { name = "onnx", specifier = ">=1.18.0" },
     { name = "onnxruntime", specifier = "==1.17.1" },
-    { name = "onnxscript", specifier = "==0.1.0" },
+    { name = "onnxscript", specifier = "==0.5.7" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "python-multipart", specifier = ">=0.0.21" },
     { name = "pytorch-lightning", specifier = "==2.2.1" },
@@ -1592,6 +1592,21 @@ wheels = [
 ]
 
 [[package]]
+name = "onnx-ir"
+version = "0.1.15"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ml-dtypes" },
+    { name = "numpy" },
+    { name = "onnx" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7a/a4/930427e49ccae912f2e21da96b8f52dbb7fb2fdfbba8006dca15c678e96b/onnx_ir-0.1.15.tar.gz", hash = "sha256:edec4db6c502856835e8f46f2d9f5dd8079fbd930170e418eda4203c599fb74a", size = 128266, upload-time = "2026-01-21T17:42:37.465Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/21/bf/62da272e87fd1d6317fe7a4dd22a8339f5ce37f95e5f63ad1ee46a13cd35/onnx_ir-0.1.15-py3-none-any.whl", hash = "sha256:c6df0eabd732671e9272275cf7693797497658610c00688d5e05132cbb4e2495", size = 148733, upload-time = "2026-01-21T17:42:36.313Z" },
+]
+
+[[package]]
 name = "onnxruntime"
 version = "1.17.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1613,18 +1628,19 @@ wheels = [
 
 [[package]]
 name = "onnxscript"
-version = "0.1.0"
+version = "0.5.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ml-dtypes" },
     { name = "numpy" },
     { name = "onnx" },
+    { name = "onnx-ir" },
     { name = "packaging" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/31/79/083f1fcea9a69c1b5c0b6d91e57aeee7dd5059615dab3f49302b0239e2d2/onnxscript-0.1.0.tar.gz", hash = "sha256:dbeca43757da1bf88436dccb7c68f76e770959ec6c7ebd7a6873a8e10061f005", size = 607722, upload-time = "2025-01-27T19:45:12.715Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2c/f8/358a7d982ea51bc1b0c264f29c08adf096c62ba9f258ba13c954b41c46f5/onnxscript-0.5.7.tar.gz", hash = "sha256:480d572451bc233ed7f742b5005cb0c899594b2fdc28e15167dab26f7fd777ad", size = 596306, upload-time = "2025-12-16T20:47:15.762Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4d/f1/ad1a02fff45d08d78cceae67300355954cab970c5e4c393b448db77edb75/onnxscript-0.1.0-py3-none-any.whl", hash = "sha256:ad3259318a1c9101dca464cdb7591f1342ef753f5d3b64ced76ede1dd3ab20b0", size = 702676, upload-time = "2025-01-27T19:45:15.517Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/ec/1656ea93be1e50baf429c20603dce249fa3571f3a180407cee79b1afa013/onnxscript-0.5.7-py3-none-any.whl", hash = "sha256:f94a66059c56d13b44908e9b7fd9dae4b4faa6681c784f3fd4c29cfa863e454e", size = 693353, upload-time = "2025-12-16T20:47:17.897Z" },
 ]
 
 [[package]]
