@@ -36,7 +36,7 @@ dependencies = [
     "pyyaml>=6.0",
     "ml_dtypes>=0.5.0",
     "onnx>=1.18.0",
-    "onnxruntime==1.17.1",
+    "onnxruntime==1.23.2",
     "onnxscript==0.1.0",
     "python-multipart>=0.0.21",
     "httpx>=0.28.1",
